@@ -1625,9 +1625,10 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">LLM Provider</label>
-                                <select class="form-select" name="provider">
+                                <select class="form-select" name="provider" id="agent-provider-select">
                                     <option value="anthropic">Anthropic (Claude)</option>
                                     <option value="openai">OpenAI (GPT)</option>
+                                    <option value="openrouter">OpenRouter (FREE Models Available)</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -1885,12 +1886,55 @@
             connectWebSocket();
             refreshAll();
             setupFileUpload();
+            setupProviderModelSelection();
             setInterval(() => {
                 if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
                     refreshAll();
                 }
                 checkServices();
             }, 30000);
+        }
+
+        function setupProviderModelSelection() {
+            const providerSelect = document.getElementById('agent-provider-select');
+            const modelSelect = document.getElementById('agent-model-select');
+
+            if (!providerSelect || !modelSelect) return;
+
+            const modelsByProvider = {
+                anthropic: [
+                    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+                    { value: 'claude-3-5-haiku-latest', label: 'Claude 3.5 Haiku' },
+                    { value: 'claude-3-5-sonnet-latest', label: 'Claude 3.5 Sonnet' }
+                ],
+                openai: [
+                    { value: 'gpt-4o', label: 'GPT-4o' },
+                    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+                    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' }
+                ],
+                openrouter: [
+                    { value: 'meta-llama/llama-3.2-3b-instruct:free', label: 'Llama 3.2 3B (FREE)' },
+                    { value: 'google/gemma-2-9b-it:free', label: 'Gemma 2 9B (FREE)' },
+                    { value: 'microsoft/phi-3-mini-128k-instruct:free', label: 'Phi-3 Mini (FREE)' },
+                    { value: 'meta-llama/llama-3.1-8b-instruct:free', label: 'Llama 3.1 8B (FREE)' }
+                ]
+            };
+
+            function updateModelOptions() {
+                const provider = providerSelect.value;
+                const models = modelsByProvider[provider] || [];
+
+                modelSelect.innerHTML = '';
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.value;
+                    option.textContent = model.label;
+                    modelSelect.appendChild(option);
+                });
+            }
+
+            providerSelect.addEventListener('change', updateModelOptions);
+            updateModelOptions(); // Initialize on load
         }
 
         // WebSocket
