@@ -1,0 +1,3086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Orchestrator Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --bg-input: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #06b6d4;
+            --border: #475569;
+            --border-light: #334155;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border-radius: 9999px;
+            font-size: 0.875rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 1rem 0;
+            flex-shrink: 0;
+        }
+
+        .nav-section {
+            padding: 0.5rem 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .nav-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            padding-left: 0.5rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .nav-item .icon {
+            font-size: 1.1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .nav-item .badge {
+            margin-left: auto;
+            background: var(--bg-card);
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+        }
+
+        .nav-item.active .badge {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+        }
+
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-card-icon {
+            font-size: 1.5rem;
+        }
+
+        .stat-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-card-trend {
+            font-size: 0.75rem;
+            color: var(--success);
+            margin-top: 0.25rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* Search and Filters */
+        .filters-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .search-input input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .search-input::before {
+            content: "🔍";
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.875rem;
+        }
+
+        .filter-select {
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: var(--bg-card);
+        }
+
+        td {
+            font-size: 0.875rem;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-card);
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.625rem 1rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            padding: 0.5rem;
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .btn-icon {
+            padding: 0.5rem;
+            width: 32px;
+            height: 32px;
+            justify-content: center;
+        }
+
+        /* Status Badge */
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .status-running, .status-in_progress { background: rgba(59, 130, 246, 0.15); color: var(--accent); }
+        .status-completed, .status-success { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+        .status-failed, .status-error { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        .status-active { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+        .status-idle { background: rgba(100, 116, 139, 0.15); color: var(--text-muted); }
+        .status-closed { background: rgba(100, 116, 139, 0.15); color: var(--text-muted); }
+
+        .status::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* Priority Badge */
+        .priority {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .priority-1, .priority-normal { background: var(--bg-card); color: var(--text-secondary); }
+        .priority-2, .priority-high { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .priority-3, .priority-critical { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid var(--border);
+            animation: modalIn 0.2s ease;
+            margin: auto 0;
+        }
+
+        .modal.large {
+            max-width: 900px;
+        }
+
+        .modal.xlarge {
+            max-width: 1200px;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .form-label .required {
+            color: var(--danger);
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-input::placeholder,
+        .form-textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.375rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .form-checkbox input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+        }
+
+        /* File Upload */
+        .file-upload {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-upload:hover {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .file-upload.dragover {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .file-upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .file-upload-text {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .file-upload-text strong {
+            color: var(--accent);
+        }
+
+        .file-list {
+            margin-top: 1rem;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-item-icon {
+            font-size: 1.25rem;
+        }
+
+        .file-item-info {
+            flex: 1;
+        }
+
+        .file-item-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .file-item-size {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .file-item-remove {
+            color: var(--danger);
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.25rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Chat Interface */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 180px);
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .chat-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-session-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .chat-session-title {
+            font-weight: 600;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 1rem;
+            max-width: 80%;
+        }
+
+        .chat-message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .chat-message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .chat-message.user .chat-message-avatar {
+            background: var(--accent);
+        }
+
+        .chat-message-content {
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .chat-message.user .chat-message-content {
+            background: var(--accent);
+        }
+
+        .chat-message-time {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        .chat-message-typing {
+            display: flex;
+            gap: 4px;
+            padding: 0.5rem 1rem;
+        }
+
+        .chat-message-typing span {
+            width: 8px;
+            height: 8px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .chat-message-typing span:nth-child(2) { animation-delay: 0.2s; }
+        .chat-message-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .chat-input-container {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .chat-input-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .chat-attachments {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .chat-attachment {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            background: var(--bg-card);
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
+
+        .chat-attachment-remove {
+            cursor: pointer;
+            color: var(--danger);
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+
+        .chat-input textarea {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            resize: none;
+            min-height: 44px;
+            max-height: 200px;
+        }
+
+        .chat-input textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .chat-input-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Sessions List */
+        .sessions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .session-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .session-item:hover {
+            background: var(--border);
+        }
+
+        .session-item.active {
+            border: 1px solid var(--accent);
+        }
+
+        .session-item-icon {
+            font-size: 1.25rem;
+        }
+
+        .session-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .session-item-title {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .session-item-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Detail View */
+        .detail-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-section-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .detail-item {
+            padding: 0.75rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+        }
+
+        .detail-item-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-item-value {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .detail-full-width {
+            grid-column: span 2;
+        }
+
+        .code-block {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* Services Status */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .service-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+        }
+
+        .service-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .service-dot.online { background: var(--success); }
+        .service-dot.offline { background: var(--danger); }
+        .service-dot.unknown { background: var(--text-muted); }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 2000;
+        }
+
+        .toast {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: toastIn 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.info { background: var(--info); }
+        .toast.warning { background: var(--warning); }
+
+        @keyframes toastIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state-text {
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Utility */
+        .text-truncate {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-warning { color: var(--warning); }
+
+        .d-none { display: none !important; }
+        .d-flex { display: flex; }
+        .gap-1 { gap: 0.5rem; }
+        .gap-2 { gap: 1rem; }
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+
+        /* Tool Chips */
+        .tool-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.375rem;
+        }
+
+        .tool-chip {
+            padding: 0.25rem 0.5rem;
+            background: var(--bg-card);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        /* Workflow Steps */
+        .workflow-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .workflow-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+        }
+
+        .workflow-step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .workflow-step-info {
+            flex: 1;
+        }
+
+        .workflow-step-name {
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .workflow-step-agent {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .workflow-step-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        /* Code Editor */
+        .code-editor {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.8rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .detail-full-width {
+                grid-column: span 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Agent Orchestrator</h1>
+        <div class="header-actions">
+            <div class="status-badge">
+                <div class="status-dot" id="ws-status"></div>
+                <span id="ws-status-text">Connecting...</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="nav-section">
+                <div class="nav-section-title">Overview</div>
+                <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Management</div>
+                <div class="nav-item" data-page="tasks" onclick="switchPage('tasks')">
+                    <span class="icon">📋</span>
+                    <span>Tasks</span>
+                    <span class="badge" id="nav-task-count">0</span>
+                </div>
+                <div class="nav-item" data-page="agents" onclick="switchPage('agents')">
+                    <span class="icon">🤖</span>
+                    <span>Agents</span>
+                    <span class="badge" id="nav-agent-count">0</span>
+                </div>
+                <div class="nav-item" data-page="workflows" onclick="switchPage('workflows')">
+                    <span class="icon">🔄</span>
+                    <span>Workflows</span>
+                    <span class="badge" id="nav-workflow-count">0</span>
+                </div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Communication</div>
+                <div class="nav-item" data-page="conversations" onclick="switchPage('conversations')">
+                    <span class="icon">💬</span>
+                    <span>Conversations</span>
+                    <span class="badge" id="nav-session-count">0</span>
+                </div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Resources</div>
+                <div class="nav-item" data-page="files" onclick="switchPage('files')">
+                    <span class="icon">📁</span>
+                    <span>Files</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page active">
+                <div class="page-header">
+                    <h2 class="page-title">Dashboard</h2>
+                    <div class="page-actions">
+                        <button class="btn btn-secondary" onclick="refreshAll()">
+                            <span id="refresh-icon">🔄</span> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Total Tasks</span>
+                            <span class="stat-card-icon">📋</span>
+                        </div>
+                        <div class="stat-card-value" id="stat-tasks">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Active Agents</span>
+                            <span class="stat-card-icon">🤖</span>
+                        </div>
+                        <div class="stat-card-value" id="stat-agents">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Workflows</span>
+                            <span class="stat-card-icon">🔄</span>
+                        </div>
+                        <div class="stat-card-value" id="stat-workflows">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Conversations</span>
+                            <span class="stat-card-icon">💬</span>
+                        </div>
+                        <div class="stat-card-value" id="stat-sessions">0</div>
+                    </div>
+                </div>
+
+                <div class="card mb-2">
+                    <div class="card-header">
+                        <h3 class="card-title">Services Status</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="services-grid" id="services-status">
+                            <div class="service-item">
+                                <div class="service-dot unknown" id="service-api"></div>
+                                <span>API Server</span>
+                            </div>
+                            <div class="service-item">
+                                <div class="service-dot unknown" id="service-nats"></div>
+                                <span>NATS</span>
+                            </div>
+                            <div class="service-item">
+                                <div class="service-dot unknown" id="service-redis"></div>
+                                <span>Redis</span>
+                            </div>
+                            <div class="service-item">
+                                <div class="service-dot unknown" id="service-postgres"></div>
+                                <span>PostgreSQL</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Recent Tasks</h3>
+                        <button class="btn btn-sm btn-secondary" onclick="switchPage('tasks')">View All</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-tasks-table">
+                                <tr><td colspan="4" class="empty-state">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks Page -->
+            <div id="page-tasks" class="page d-none">
+                <div class="page-header">
+                    <h2 class="page-title">Tasks</h2>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="openModal('create-task-modal')">+ New Task</button>
+                    </div>
+                </div>
+
+                <div class="filters-bar">
+                    <div class="search-input">
+                        <input type="text" id="task-search" placeholder="Search tasks..." onkeyup="filterTasks()">
+                    </div>
+                    <select class="filter-select" id="task-status-filter" onchange="filterTasks()">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="running">Running</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Agent</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tasks-table">
+                                <tr><td colspan="7" class="loading"><div class="spinner"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agents Page -->
+            <div id="page-agents" class="page d-none">
+                <div class="page-header">
+                    <h2 class="page-title">Agents</h2>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="openModal('create-agent-modal')">+ New Agent</button>
+                    </div>
+                </div>
+
+                <div class="filters-bar">
+                    <div class="search-input">
+                        <input type="text" id="agent-search" placeholder="Search agents..." onkeyup="filterAgents()">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Provider</th>
+                                    <th>Status</th>
+                                    <th>Tools</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agents-table">
+                                <tr><td colspan="7" class="loading"><div class="spinner"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workflows Page -->
+            <div id="page-workflows" class="page d-none">
+                <div class="page-header">
+                    <h2 class="page-title">Workflows</h2>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="openModal('create-workflow-modal')">+ New Workflow</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Steps</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workflows-table">
+                                <tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversations Page -->
+            <div id="page-conversations" class="page d-none">
+                <div class="page-header">
+                    <h2 class="page-title">Conversations</h2>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="openModal('create-session-modal')">+ New Session</button>
+                    </div>
+                </div>
+
+                <div id="conversations-content">
+                    <!-- Session list or chat view will be rendered here -->
+                    <div class="sessions-list" id="sessions-list"></div>
+                </div>
+            </div>
+
+            <!-- Files Page -->
+            <div id="page-files" class="page d-none">
+                <div class="page-header">
+                    <h2 class="page-title">Files</h2>
+                </div>
+
+                <div class="card mb-2">
+                    <div class="card-header">
+                        <h3 class="card-title">Upload Files</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="file-upload" id="file-upload-zone">
+                            <div class="file-upload-icon">📄</div>
+                            <div class="file-upload-text">
+                                <strong>Click to upload</strong> or drag and drop<br>
+                                <span class="text-muted">PDF, DOCX, TXT, Images up to 50MB</span>
+                            </div>
+                            <input type="file" id="file-input" multiple hidden>
+                        </div>
+                        <div class="file-list" id="upload-file-list"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">All Files</h3>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th>Uploaded</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="files-table">
+                                <tr><td colspan="5" class="empty-state">No files uploaded yet</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Create Task Modal -->
+    <div class="modal-overlay" id="create-task-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New Task</h3>
+                <button class="modal-close" onclick="closeModal('create-task-modal')">&times;</button>
+            </div>
+            <form id="create-task-form" onsubmit="createTask(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Task Name <span class="required">*</span></label>
+                        <input type="text" class="form-input" name="name" required placeholder="e.g., Analyze customer feedback">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description <span class="required">*</span></label>
+                        <textarea class="form-textarea" name="description" required placeholder="Describe what the task should accomplish..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Priority</label>
+                            <select class="form-select" name="priority">
+                                <option value="1">Normal</option>
+                                <option value="2">High</option>
+                                <option value="3">Critical</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Agent (Optional)</label>
+                            <select class="form-select" name="agent_id" id="task-agent-select">
+                                <option value="">Auto-assign</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attachments</label>
+                        <div class="file-upload" id="task-file-upload">
+                            <div class="file-upload-icon">📎</div>
+                            <div class="file-upload-text">Click to attach files</div>
+                            <input type="file" id="task-file-input" multiple hidden>
+                        </div>
+                        <div class="file-list" id="task-file-list"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('create-task-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Task Modal -->
+    <div class="modal-overlay" id="view-task-modal">
+        <div class="modal large">
+            <div class="modal-header">
+                <h3 class="modal-title">Task Details</h3>
+                <button class="modal-close" onclick="closeModal('view-task-modal')">&times;</button>
+            </div>
+            <div class="modal-body" id="view-task-content">
+                <!-- Dynamically populated -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('view-task-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Agent Modal -->
+    <div class="modal-overlay" id="create-agent-modal">
+        <div class="modal large">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New Agent</h3>
+                <button class="modal-close" onclick="closeModal('create-agent-modal')">&times;</button>
+            </div>
+            <form id="create-agent-form" onsubmit="createAgent(event)">
+                <div class="modal-body">
+                    <div class="tabs">
+                        <div class="tab active" data-tab="agent-basic" onclick="switchModalTab(this, 'agent')">Basic Info</div>
+                        <div class="tab" data-tab="agent-config" onclick="switchModalTab(this, 'agent')">Configuration</div>
+                        <div class="tab" data-tab="agent-tools" onclick="switchModalTab(this, 'agent')">Tools</div>
+                    </div>
+
+                    <div id="agent-basic" class="tab-content active">
+                        <div class="form-group">
+                            <label class="form-label">Agent Name <span class="required">*</span></label>
+                            <input type="text" class="form-input" name="name" required placeholder="e.g., Research Assistant">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Role <span class="required">*</span></label>
+                            <input type="text" class="form-input" name="role" required placeholder="e.g., Data analyst and researcher">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Goal <span class="required">*</span></label>
+                            <textarea class="form-textarea" name="goal" required placeholder="What should this agent accomplish?"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Backstory</label>
+                            <textarea class="form-textarea" name="backstory" placeholder="Optional context about the agent's expertise..."></textarea>
+                        </div>
+                    </div>
+
+                    <div id="agent-config" class="tab-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">LLM Provider</label>
+                                <select class="form-select" name="provider">
+                                    <option value="anthropic">Anthropic (Claude)</option>
+                                    <option value="openai">OpenAI (GPT)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Model</label>
+                                <select class="form-select" name="model_id" id="agent-model-select">
+                                    <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                                    <option value="claude-3-5-haiku-latest">Claude 3.5 Haiku</option>
+                                    <option value="gpt-4o">GPT-4o</option>
+                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Temperature</label>
+                                <input type="number" class="form-input" name="temperature" value="0.7" min="0" max="2" step="0.1">
+                                <div class="form-hint">0 = deterministic, 2 = creative</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Max Iterations</label>
+                                <input type="number" class="form-input" name="max_iterations" value="10" min="1" max="100">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Timeout (seconds)</label>
+                                <input type="number" class="form-input" name="timeout" value="300" min="10" max="3600">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Memory Type</label>
+                                <select class="form-select" name="memory_type">
+                                    <option value="task">Task-scoped</option>
+                                    <option value="session">Session-scoped</option>
+                                    <option value="persistent">Persistent</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="agent-tools" class="tab-content">
+                        <div class="form-group">
+                            <label class="form-label">Built-in Tools</label>
+                            <div class="form-hint mb-1">Select tools this agent can use</div>
+                            <label class="form-checkbox"><input type="checkbox" name="tools" value="think" checked> Think - Structured reasoning</label>
+                            <label class="form-checkbox"><input type="checkbox" name="tools" value="calculator"> Calculator - Math operations</label>
+                            <label class="form-checkbox"><input type="checkbox" name="tools" value="http"> HTTP - API requests</label>
+                            <label class="form-checkbox"><input type="checkbox" name="tools" value="file"> File - File operations</label>
+                            <label class="form-checkbox"><input type="checkbox" name="tools" value="scraper"> Scraper - Web scraping</label>
+                            <label class="form-checkbox"><input type="checkbox" name="tools" value="code"> Code - Execute Python</label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Capabilities (comma-separated)</label>
+                            <input type="text" class="form-input" name="capabilities" placeholder="e.g., analysis, coding, research">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('create-agent-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Agent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Agent Modal -->
+    <div class="modal-overlay" id="view-agent-modal">
+        <div class="modal large">
+            <div class="modal-header">
+                <h3 class="modal-title">Agent Details</h3>
+                <button class="modal-close" onclick="closeModal('view-agent-modal')">&times;</button>
+            </div>
+            <div class="modal-body" id="view-agent-content">
+                <!-- Dynamically populated -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('view-agent-modal')">Close</button>
+                <button type="button" class="btn btn-danger" onclick="deleteCurrentAgent()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Workflow Modal -->
+    <div class="modal-overlay" id="create-workflow-modal">
+        <div class="modal large">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New Workflow</h3>
+                <button class="modal-close" onclick="closeModal('create-workflow-modal')">&times;</button>
+            </div>
+            <form id="create-workflow-form" onsubmit="createWorkflow(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Workflow Name <span class="required">*</span></label>
+                        <input type="text" class="form-input" name="name" required placeholder="e.g., Content Pipeline">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-textarea" name="description" placeholder="Describe the workflow..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Workflow Steps</label>
+                        <div class="workflow-steps" id="workflow-steps">
+                            <div class="empty-state">
+                                <p class="text-muted">No steps added yet</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary mt-1" onclick="addWorkflowStep()">+ Add Step</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('create-workflow-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Workflow</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Workflow Modal -->
+    <div class="modal-overlay" id="view-workflow-modal">
+        <div class="modal large">
+            <div class="modal-header">
+                <h3 class="modal-title">Workflow Details</h3>
+                <button class="modal-close" onclick="closeModal('view-workflow-modal')">&times;</button>
+            </div>
+            <div class="modal-body" id="view-workflow-content">
+                <!-- Dynamically populated -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('view-workflow-modal')">Close</button>
+                <button type="button" class="btn btn-success" onclick="runCurrentWorkflow()">Run Workflow</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Session Modal -->
+    <div class="modal-overlay" id="create-session-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Start New Conversation</h3>
+                <button class="modal-close" onclick="closeModal('create-session-modal')">&times;</button>
+            </div>
+            <form id="create-session-form" onsubmit="createSession(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Agent <span class="required">*</span></label>
+                        <select class="form-select" name="agent_id" id="session-agent-select" required>
+                            <option value="">Select an agent...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Title (Optional)</label>
+                        <input type="text" class="form-input" name="title" placeholder="e.g., Project discussion">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">System Prompt Override</label>
+                        <textarea class="form-textarea" name="system_prompt" placeholder="Optional custom system prompt..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('create-session-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Start Session</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Chat Modal -->
+    <div class="modal-overlay" id="chat-modal">
+        <div class="modal xlarge">
+            <div class="modal-header">
+                <div class="chat-session-info">
+                    <span class="chat-session-title" id="chat-session-title">Conversation</span>
+                    <span class="status" id="chat-session-status">Active</span>
+                </div>
+                <button class="modal-close" onclick="closeChat()">&times;</button>
+            </div>
+            <div class="chat-container" style="height: 70vh; border: none; border-radius: 0;">
+                <div class="chat-messages" id="chat-messages">
+                    <!-- Messages will be rendered here -->
+                </div>
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <div class="chat-attachments" id="chat-attachments"></div>
+                        <div class="chat-input">
+                            <button type="button" class="btn btn-ghost btn-icon" onclick="attachChatFile()">📎</button>
+                            <textarea id="chat-input" placeholder="Type your message..." rows="1" onkeydown="handleChatKeydown(event)"></textarea>
+                            <button type="button" class="btn btn-primary btn-icon" onclick="sendChatMessage()">➤</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <input type="file" id="chat-file-input" multiple hidden>
+        </div>
+    </div>
+
+    <!-- Add Workflow Step Modal -->
+    <div class="modal-overlay" id="add-step-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Workflow Step</h3>
+                <button class="modal-close" onclick="closeModal('add-step-modal')">&times;</button>
+            </div>
+            <form id="add-step-form" onsubmit="saveWorkflowStep(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Step Name <span class="required">*</span></label>
+                        <input type="text" class="form-input" name="step_name" required placeholder="e.g., Research Phase">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Agent <span class="required">*</span></label>
+                        <select class="form-select" name="step_agent_id" id="step-agent-select" required>
+                            <option value="">Select an agent...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Task Description <span class="required">*</span></label>
+                        <textarea class="form-textarea" name="step_task" required placeholder="What should this step accomplish?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('add-step-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Step</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // State
+        const state = {
+            tasks: [],
+            agents: [],
+            workflows: [],
+            sessions: [],
+            files: [],
+            currentSession: null,
+            currentTask: null,
+            currentAgent: null,
+            currentWorkflow: null,
+            workflowSteps: [],
+            taskFiles: [],
+            chatAttachments: [],
+            ws: null,
+            wsReconnectAttempts: 0
+        };
+
+        const API_BASE = '';
+        const MAX_RECONNECT = 5;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            connectWebSocket();
+            refreshAll();
+            setupFileUpload();
+            setInterval(() => {
+                if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+                    refreshAll();
+                }
+                checkServices();
+            }, 30000);
+        }
+
+        // WebSocket
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/events/stream`;
+
+            try {
+                state.ws = new WebSocket(wsUrl);
+
+                state.ws.onopen = () => {
+                    state.wsReconnectAttempts = 0;
+                    document.getElementById('ws-status').className = 'status-dot online';
+                    document.getElementById('ws-status-text').textContent = 'Live';
+                };
+
+                state.ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleWsMessage(data);
+                    } catch (e) {
+                        console.error('WS parse error:', e);
+                    }
+                };
+
+                state.ws.onclose = () => {
+                    document.getElementById('ws-status').className = 'status-dot offline';
+                    document.getElementById('ws-status-text').textContent = 'Offline';
+
+                    if (state.wsReconnectAttempts < MAX_RECONNECT) {
+                        state.wsReconnectAttempts++;
+                        document.getElementById('ws-status-text').textContent = 'Reconnecting...';
+                        setTimeout(connectWebSocket, 2000 * state.wsReconnectAttempts);
+                    }
+                };
+
+                state.ws.onerror = (e) => console.error('WS error:', e);
+            } catch (e) {
+                console.error('WS connection failed:', e);
+            }
+        }
+
+        function handleWsMessage(data) {
+            if (data.type === 'heartbeat') {
+                if (state.ws?.readyState === WebSocket.OPEN) {
+                    state.ws.send('ping');
+                }
+                return;
+            }
+
+            if (data.type === 'pong') {
+                // Acknowledge pong response, no action needed
+                return;
+            }
+
+            if (data.type?.includes('task')) {
+                fetchTasks();
+            }
+            if (data.type?.includes('agent')) {
+                fetchAgents();
+            }
+            if (data.type === 'result_event' && data.data) {
+                if (data.data.result) {
+                    showToast('Task completed!', 'success');
+                } else if (data.data.error) {
+                    showToast(`Task failed: ${data.data.error}`, 'error');
+                }
+            }
+        }
+
+        // Navigation
+        function switchPage(page) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelector(`[data-page="${page}"]`).classList.add('active');
+
+            document.querySelectorAll('.page').forEach(p => p.classList.add('d-none'));
+            document.getElementById(`page-${page}`).classList.remove('d-none');
+
+            // Refresh data for the page
+            switch(page) {
+                case 'tasks': fetchTasks(); break;
+                case 'agents': fetchAgents(); break;
+                case 'workflows': fetchWorkflows(); break;
+                case 'conversations': fetchSessions(); break;
+                case 'files': fetchFiles(); break;
+            }
+        }
+
+        function switchModalTab(element, prefix) {
+            const tabName = element.dataset.tab;
+            element.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            element.classList.add('active');
+
+            element.closest('.modal-body').querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // Modal handling
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            if (id === 'create-task-modal' || id === 'create-session-modal' || id === 'add-step-modal') {
+                populateAgentSelects();
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            const form = document.querySelector(`#${id} form`);
+            if (form) form.reset();
+
+            // Reset state
+            if (id === 'create-task-modal') {
+                state.taskFiles = [];
+                document.getElementById('task-file-list').innerHTML = '';
+            }
+            if (id === 'create-workflow-modal') {
+                state.workflowSteps = [];
+                renderWorkflowSteps();
+            }
+        }
+
+        // Toast
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // API helpers
+        async function api(endpoint, options = {}) {
+            try {
+                const res = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: { 'Content-Type': 'application/json', ...options.headers },
+                    ...options
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: 'Request failed' }));
+                    // Handle FastAPI validation errors (422) which return detail as array
+                    let errorMsg = 'Request failed';
+                    if (Array.isArray(err.detail)) {
+                        errorMsg = err.detail.map(e => {
+                            const field = e.loc?.slice(1).join('.') || 'field';
+                            return `${field}: ${e.msg}`;
+                        }).join('; ');
+                    } else if (typeof err.detail === 'string') {
+                        errorMsg = err.detail;
+                    }
+                    throw new Error(errorMsg);
+                }
+                return res.json();
+            } catch (e) {
+                console.error(`API error (${endpoint}):`, e);
+                throw e;
+            }
+        }
+
+        // Refresh all data
+        async function refreshAll() {
+            await Promise.all([
+                fetchTasks(),
+                fetchAgents(),
+                fetchWorkflows(),
+                fetchSessions(),
+                checkServices()
+            ]);
+        }
+
+        // Services
+        async function checkServices() {
+            try {
+                const data = await api('/health/ready');
+                document.getElementById('service-api').className = 'service-dot online';
+                document.getElementById('service-nats').className = `service-dot ${data.checks?.nats ? 'online' : 'offline'}`;
+                document.getElementById('service-redis').className = `service-dot ${data.checks?.redis ? 'online' : 'offline'}`;
+                document.getElementById('service-postgres').className = `service-dot ${data.checks?.postgres ? 'online' : 'offline'}`;
+            } catch (e) {
+                document.getElementById('service-api').className = 'service-dot offline';
+            }
+        }
+
+        // Tasks
+        async function fetchTasks() {
+            try {
+                const data = await api('/tasks');
+                state.tasks = data.items || [];
+                document.getElementById('stat-tasks').textContent = data.total || 0;
+                document.getElementById('nav-task-count').textContent = data.total || 0;
+                renderTasks();
+                renderRecentTasks();
+            } catch (e) {
+                console.error('Failed to fetch tasks:', e);
+            }
+        }
+
+        function renderTasks() {
+            const tbody = document.getElementById('tasks-table');
+            if (!state.tasks.length) {
+                tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <div class="empty-state-title">No tasks yet</div>
+                    <div class="empty-state-text">Create your first task to get started</div>
+                    <button class="btn btn-primary" onclick="openModal('create-task-modal')">+ New Task</button>
+                </div></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.tasks.map(task => `
+                <tr>
+                    <td><code>${task.task_id?.slice(0, 8) || '-'}...</code></td>
+                    <td class="text-truncate" style="max-width: 200px">${escapeHtml(task.name)}</td>
+                    <td><span class="status status-${task.status?.toLowerCase()}">${task.status}</span></td>
+                    <td><span class="priority priority-${task.priority}">${['', 'Normal', 'High', 'Critical'][task.priority] || 'Normal'}</span></td>
+                    <td>${task.assigned_agent_id ? `<code>${task.assigned_agent_id.slice(0, 8)}...</code>` : '-'}</td>
+                    <td>${formatDate(task.created_at)}</td>
+                    <td class="table-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="viewTask('${task.task_id}')">View</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderRecentTasks() {
+            const tbody = document.getElementById('recent-tasks-table');
+            const recent = state.tasks.slice(0, 5);
+            if (!recent.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">No tasks yet</td></tr>';
+                return;
+            }
+            tbody.innerHTML = recent.map(task => `
+                <tr onclick="viewTask('${task.task_id}')" style="cursor: pointer">
+                    <td class="text-truncate" style="max-width: 200px">${escapeHtml(task.name)}</td>
+                    <td><span class="status status-${task.status?.toLowerCase()}">${task.status}</span></td>
+                    <td><span class="priority priority-${task.priority}">${['', 'Normal', 'High', 'Critical'][task.priority] || 'Normal'}</span></td>
+                    <td>${formatDate(task.created_at)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterTasks() {
+            const search = document.getElementById('task-search').value.toLowerCase();
+            const status = document.getElementById('task-status-filter').value;
+
+            const filtered = state.tasks.filter(task => {
+                const matchSearch = !search || task.name?.toLowerCase().includes(search);
+                const matchStatus = !status || task.status?.toLowerCase() === status;
+                return matchSearch && matchStatus;
+            });
+
+            const tbody = document.getElementById('tasks-table');
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-muted text-center">No matching tasks</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(task => `
+                <tr>
+                    <td><code>${task.task_id?.slice(0, 8) || '-'}...</code></td>
+                    <td class="text-truncate" style="max-width: 200px">${escapeHtml(task.name)}</td>
+                    <td><span class="status status-${task.status?.toLowerCase()}">${task.status}</span></td>
+                    <td><span class="priority priority-${task.priority}">${['', 'Normal', 'High', 'Critical'][task.priority] || 'Normal'}</span></td>
+                    <td>${task.assigned_agent_id ? `<code>${task.assigned_agent_id.slice(0, 8)}...</code>` : '-'}</td>
+                    <td>${formatDate(task.created_at)}</td>
+                    <td class="table-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="viewTask('${task.task_id}')">View</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function createTask(e) {
+            e.preventDefault();
+            const form = e.target;
+            const data = {
+                name: form.name.value,
+                description: form.description.value,
+                priority: parseInt(form.priority.value),
+                assigned_agent_id: form.agent_id.value || null
+            };
+
+            try {
+                const task = await api('/tasks', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+
+                // Upload files if any
+                if (state.taskFiles.length > 0) {
+                    for (const file of state.taskFiles) {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        await fetch(`${API_BASE}/tasks/${task.task_id}/files`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                    }
+                }
+
+                showToast('Task created successfully!', 'success');
+                closeModal('create-task-modal');
+                fetchTasks();
+            } catch (e) {
+                showToast(e.message || 'Failed to create task', 'error');
+            }
+        }
+
+        async function viewTask(taskId) {
+            try {
+                const task = await api(`/tasks/${taskId}`);
+                state.currentTask = task;
+
+                const content = document.getElementById('view-task-content');
+                content.innerHTML = `
+                    <div class="detail-section">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-item-label">Task ID</div>
+                                <div class="detail-item-value"><code>${task.task_id}</code></div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Status</div>
+                                <div class="detail-item-value"><span class="status status-${task.status?.toLowerCase()}">${task.status}</span></div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Priority</div>
+                                <div class="detail-item-value"><span class="priority priority-${task.priority}">${['', 'Normal', 'High', 'Critical'][task.priority] || 'Normal'}</span></div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Created</div>
+                                <div class="detail-item-value">${formatDate(task.created_at)}</div>
+                            </div>
+                            <div class="detail-item detail-full-width">
+                                <div class="detail-item-label">Name</div>
+                                <div class="detail-item-value">${escapeHtml(task.name)}</div>
+                            </div>
+                            <div class="detail-item detail-full-width">
+                                <div class="detail-item-label">Description</div>
+                                <div class="detail-item-value">${escapeHtml(task.description || '-')}</div>
+                            </div>
+                        </div>
+                    </div>
+                    ${task.result ? `
+                    <div class="detail-section">
+                        <div class="detail-section-title">Result</div>
+                        <div class="code-block">${escapeHtml(typeof task.result === 'object' ? JSON.stringify(task.result, null, 2) : task.result)}</div>
+                    </div>` : ''}
+                    ${task.error ? `
+                    <div class="detail-section">
+                        <div class="detail-section-title text-danger">Error</div>
+                        <div class="code-block">${escapeHtml(task.error)}</div>
+                    </div>` : ''}
+                `;
+
+                openModal('view-task-modal');
+            } catch (e) {
+                showToast('Failed to load task', 'error');
+            }
+        }
+
+        // Agents
+        async function fetchAgents() {
+            try {
+                const data = await api('/agents');
+                state.agents = data.items || [];
+                document.getElementById('stat-agents').textContent = data.total || 0;
+                document.getElementById('nav-agent-count').textContent = data.total || 0;
+                renderAgents();
+            } catch (e) {
+                console.error('Failed to fetch agents:', e);
+            }
+        }
+
+        function renderAgents() {
+            const tbody = document.getElementById('agents-table');
+            if (!state.agents.length) {
+                tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+                    <div class="empty-state-icon">🤖</div>
+                    <div class="empty-state-title">No agents registered</div>
+                    <div class="empty-state-text">Create your first agent to process tasks</div>
+                    <button class="btn btn-primary" onclick="openModal('create-agent-modal')">+ New Agent</button>
+                </div></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.agents.map(agent => `
+                <tr>
+                    <td><code>${agent.agent_id?.slice(0, 8) || '-'}...</code></td>
+                    <td>${escapeHtml(agent.name)}</td>
+                    <td class="text-truncate" style="max-width: 150px">${escapeHtml(agent.role || '-')}</td>
+                    <td>${agent.llm_config?.provider || '-'}</td>
+                    <td><span class="status status-${(agent.status || 'idle').toLowerCase()}">${agent.status || 'idle'}</span></td>
+                    <td>
+                        <div class="tool-chips">
+                            ${(agent.tools || []).slice(0, 3).map(t => `<span class="tool-chip">${t.name || t}</span>`).join('')}
+                            ${(agent.tools || []).length > 3 ? `<span class="tool-chip">+${agent.tools.length - 3}</span>` : ''}
+                        </div>
+                    </td>
+                    <td class="table-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="viewAgent('${agent.agent_id}')">View</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterAgents() {
+            const search = document.getElementById('agent-search').value.toLowerCase();
+            const filtered = state.agents.filter(agent =>
+                agent.name?.toLowerCase().includes(search) ||
+                agent.role?.toLowerCase().includes(search)
+            );
+            renderFilteredAgents(filtered);
+        }
+
+        function renderFilteredAgents(agents) {
+            const tbody = document.getElementById('agents-table');
+            if (!agents.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-muted text-center">No matching agents</td></tr>';
+                return;
+            }
+            tbody.innerHTML = agents.map(agent => `
+                <tr>
+                    <td><code>${agent.agent_id?.slice(0, 8) || '-'}...</code></td>
+                    <td>${escapeHtml(agent.name)}</td>
+                    <td class="text-truncate" style="max-width: 150px">${escapeHtml(agent.role || '-')}</td>
+                    <td>${agent.llm_config?.provider || '-'}</td>
+                    <td><span class="status status-${(agent.status || 'idle').toLowerCase()}">${agent.status || 'idle'}</span></td>
+                    <td>
+                        <div class="tool-chips">
+                            ${(agent.tools || []).slice(0, 3).map(t => `<span class="tool-chip">${t.name || t}</span>`).join('')}
+                        </div>
+                    </td>
+                    <td class="table-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="viewAgent('${agent.agent_id}')">View</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function createAgent(e) {
+            e.preventDefault();
+            const form = e.target;
+
+            const tools = Array.from(form.querySelectorAll('input[name="tools"]:checked'))
+                .map(cb => cb.value);
+
+            const capabilities = form.capabilities.value
+                .split(',')
+                .map(c => c.trim())
+                .filter(c => c);
+
+            const data = {
+                name: form.name.value,
+                role: form.role.value,
+                goal: form.goal.value,
+                backstory: form.backstory.value || null,
+                llm_config: {
+                    provider: form.provider.value,
+                    model_id: form.model_id.value,
+                    temperature: parseFloat(form.temperature.value)
+                },
+                max_iterations: parseInt(form.max_iterations.value),
+                timeout_seconds: parseInt(form.timeout.value),
+                tools: tools,
+                capabilities: capabilities
+            };
+
+            try {
+                await api('/agents', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                showToast('Agent created successfully!', 'success');
+                closeModal('create-agent-modal');
+                fetchAgents();
+            } catch (e) {
+                showToast(e.message || 'Failed to create agent', 'error');
+            }
+        }
+
+        async function viewAgent(agentId) {
+            try {
+                const agent = await api(`/agents/${agentId}`);
+                state.currentAgent = agent;
+
+                const content = document.getElementById('view-agent-content');
+                content.innerHTML = `
+                    <div class="detail-section">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-item-label">Agent ID</div>
+                                <div class="detail-item-value"><code>${agent.agent_id}</code></div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Status</div>
+                                <div class="detail-item-value"><span class="status status-${(agent.status || 'idle').toLowerCase()}">${agent.status || 'idle'}</span></div>
+                            </div>
+                            <div class="detail-item detail-full-width">
+                                <div class="detail-item-label">Name</div>
+                                <div class="detail-item-value">${escapeHtml(agent.name)}</div>
+                            </div>
+                            <div class="detail-item detail-full-width">
+                                <div class="detail-item-label">Role</div>
+                                <div class="detail-item-value">${escapeHtml(agent.role || '-')}</div>
+                            </div>
+                            <div class="detail-item detail-full-width">
+                                <div class="detail-item-label">Goal</div>
+                                <div class="detail-item-value">${escapeHtml(agent.goal || '-')}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">LLM Configuration</div>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-item-label">Provider</div>
+                                <div class="detail-item-value">${agent.llm_config?.provider || '-'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Model</div>
+                                <div class="detail-item-value">${agent.llm_config?.model_id || '-'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Temperature</div>
+                                <div class="detail-item-value">${agent.llm_config?.temperature ?? '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Tools</div>
+                        <div class="tool-chips">
+                            ${(agent.tools || []).map(t => `<span class="tool-chip">${t.name || t}</span>`).join('') || '<span class="text-muted">No tools configured</span>'}
+                        </div>
+                    </div>
+                `;
+
+                openModal('view-agent-modal');
+            } catch (e) {
+                showToast('Failed to load agent', 'error');
+            }
+        }
+
+        async function deleteCurrentAgent() {
+            if (!state.currentAgent) return;
+            if (!confirm('Are you sure you want to delete this agent?')) return;
+
+            try {
+                await api(`/agents/${state.currentAgent.agent_id}`, { method: 'DELETE' });
+                showToast('Agent deleted', 'success');
+                closeModal('view-agent-modal');
+                fetchAgents();
+            } catch (e) {
+                showToast('Failed to delete agent', 'error');
+            }
+        }
+
+        // Workflows
+        async function fetchWorkflows() {
+            try {
+                const data = await api('/workflows');
+                state.workflows = data.items || [];
+                document.getElementById('stat-workflows').textContent = data.total || 0;
+                document.getElementById('nav-workflow-count').textContent = data.total || 0;
+                renderWorkflows();
+            } catch (e) {
+                console.error('Failed to fetch workflows:', e);
+            }
+        }
+
+        function renderWorkflows() {
+            const tbody = document.getElementById('workflows-table');
+            if (!state.workflows.length) {
+                tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">
+                    <div class="empty-state-icon">🔄</div>
+                    <div class="empty-state-title">No workflows defined</div>
+                    <div class="empty-state-text">Create multi-step workflows to automate complex tasks</div>
+                    <button class="btn btn-primary" onclick="openModal('create-workflow-modal')">+ New Workflow</button>
+                </div></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.workflows.map(wf => `
+                <tr>
+                    <td><code>${wf.workflow_id?.slice(0, 8) || '-'}...</code></td>
+                    <td>${escapeHtml(wf.name)}</td>
+                    <td><span class="status status-${(wf.status || 'draft').toLowerCase()}">${wf.status || 'draft'}</span></td>
+                    <td>${wf.steps?.length || 0} steps</td>
+                    <td>${formatDate(wf.created_at)}</td>
+                    <td class="table-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="viewWorkflow('${wf.workflow_id}')">View</button>
+                        <button class="btn btn-sm btn-success" onclick="runWorkflow('${wf.workflow_id}')">Run</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderWorkflowSteps() {
+            const container = document.getElementById('workflow-steps');
+            if (!state.workflowSteps.length) {
+                container.innerHTML = '<div class="empty-state"><p class="text-muted">No steps added yet</p></div>';
+                return;
+            }
+
+            container.innerHTML = state.workflowSteps.map((step, i) => `
+                <div class="workflow-step">
+                    <div class="workflow-step-number">${i + 1}</div>
+                    <div class="workflow-step-info">
+                        <div class="workflow-step-name">${escapeHtml(step.name)}</div>
+                        <div class="workflow-step-agent">Agent: ${step.agentName || step.agent_id?.slice(0, 8) || '-'}</div>
+                    </div>
+                    <div class="workflow-step-actions">
+                        <button class="btn btn-ghost btn-icon btn-sm" onclick="removeWorkflowStep(${i})">❌</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addWorkflowStep() {
+            openModal('add-step-modal');
+        }
+
+        function saveWorkflowStep(e) {
+            e.preventDefault();
+            const form = e.target;
+            const agentSelect = document.getElementById('step-agent-select');
+
+            state.workflowSteps.push({
+                name: form.step_name.value,
+                agent_id: form.step_agent_id.value,
+                agentName: agentSelect.options[agentSelect.selectedIndex].text,
+                task: form.step_task.value
+            });
+
+            renderWorkflowSteps();
+            closeModal('add-step-modal');
+        }
+
+        function removeWorkflowStep(index) {
+            state.workflowSteps.splice(index, 1);
+            renderWorkflowSteps();
+        }
+
+        async function createWorkflow(e) {
+            e.preventDefault();
+            const form = e.target;
+
+            const data = {
+                name: form.name.value,
+                description: form.description.value,
+                steps: state.workflowSteps.map((step, i) => ({
+                    step_id: `step-${i + 1}`,
+                    name: step.name,
+                    agent_id: step.agent_id,
+                    task_template: { description: step.task },
+                    dependencies: i > 0 ? [`step-${i}`] : []
+                }))
+            };
+
+            try {
+                await api('/workflows', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                showToast('Workflow created successfully!', 'success');
+                closeModal('create-workflow-modal');
+                fetchWorkflows();
+            } catch (e) {
+                showToast(e.message || 'Failed to create workflow', 'error');
+            }
+        }
+
+        async function viewWorkflow(workflowId) {
+            try {
+                const wf = await api(`/workflows/${workflowId}`);
+                state.currentWorkflow = wf;
+
+                const content = document.getElementById('view-workflow-content');
+                content.innerHTML = `
+                    <div class="detail-section">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-item-label">Workflow ID</div>
+                                <div class="detail-item-value"><code>${wf.workflow_id}</code></div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Status</div>
+                                <div class="detail-item-value"><span class="status status-${(wf.status || 'draft').toLowerCase()}">${wf.status || 'draft'}</span></div>
+                            </div>
+                            <div class="detail-item detail-full-width">
+                                <div class="detail-item-label">Name</div>
+                                <div class="detail-item-value">${escapeHtml(wf.name)}</div>
+                            </div>
+                            <div class="detail-item detail-full-width">
+                                <div class="detail-item-label">Description</div>
+                                <div class="detail-item-value">${escapeHtml(wf.description || '-')}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Steps (${wf.steps?.length || 0})</div>
+                        <div class="workflow-steps">
+                            ${(wf.steps || []).map((step, i) => `
+                                <div class="workflow-step">
+                                    <div class="workflow-step-number">${i + 1}</div>
+                                    <div class="workflow-step-info">
+                                        <div class="workflow-step-name">${escapeHtml(step.name || step.step_id)}</div>
+                                        <div class="workflow-step-agent">Agent: ${step.agent_id?.slice(0, 8) || '-'}</div>
+                                    </div>
+                                </div>
+                            `).join('') || '<div class="text-muted">No steps defined</div>'}
+                        </div>
+                    </div>
+                `;
+
+                openModal('view-workflow-modal');
+            } catch (e) {
+                showToast('Failed to load workflow', 'error');
+            }
+        }
+
+        async function runWorkflow(workflowId) {
+            try {
+                await api(`/workflows/${workflowId}/execute`, {
+                    method: 'POST',
+                    body: JSON.stringify({})
+                });
+                showToast('Workflow started!', 'success');
+            } catch (e) {
+                showToast(e.message || 'Failed to start workflow', 'error');
+            }
+        }
+
+        function runCurrentWorkflow() {
+            if (state.currentWorkflow) {
+                runWorkflow(state.currentWorkflow.workflow_id);
+                closeModal('view-workflow-modal');
+            }
+        }
+
+        // Sessions / Conversations
+        async function fetchSessions() {
+            try {
+                const data = await api('/sessions');
+                state.sessions = data || [];
+                document.getElementById('stat-sessions').textContent = state.sessions.length;
+                document.getElementById('nav-session-count').textContent = state.sessions.length;
+                renderSessions();
+            } catch (e) {
+                console.error('Failed to fetch sessions:', e);
+                state.sessions = [];
+                renderSessions();
+            }
+        }
+
+        function renderSessions() {
+            const container = document.getElementById('sessions-list');
+            if (!state.sessions.length) {
+                container.innerHTML = `<div class="empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <div class="empty-state-title">No conversations yet</div>
+                    <div class="empty-state-text">Start a conversation with an agent</div>
+                    <button class="btn btn-primary" onclick="openModal('create-session-modal')">+ New Session</button>
+                </div>`;
+                return;
+            }
+
+            container.innerHTML = state.sessions.map(session => `
+                <div class="session-item" onclick="openChat('${session.session_id}')">
+                    <div class="session-item-icon">💬</div>
+                    <div class="session-item-info">
+                        <div class="session-item-title">${escapeHtml(session.title || 'Untitled')}</div>
+                        <div class="session-item-meta">${session.message_count || 0} messages · ${formatDate(session.last_activity_at || session.created_at)}</div>
+                    </div>
+                    <span class="status status-${session.status?.toLowerCase()}">${session.status}</span>
+                </div>
+            `).join('');
+        }
+
+        async function createSession(e) {
+            e.preventDefault();
+            const form = e.target;
+
+            const data = {
+                agent_id: form.agent_id.value,
+                title: form.title.value || null,
+                system_prompt: form.system_prompt.value || null
+            };
+
+            try {
+                const session = await api('/sessions', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                showToast('Session created!', 'success');
+                closeModal('create-session-modal');
+                fetchSessions();
+                openChat(session.session_id);
+            } catch (e) {
+                showToast(e.message || 'Failed to create session', 'error');
+            }
+        }
+
+        async function openChat(sessionId) {
+            try {
+                const session = await api(`/sessions/${sessionId}`);
+                state.currentSession = session;
+
+                document.getElementById('chat-session-title').textContent = session.title || 'Conversation';
+                document.getElementById('chat-session-status').textContent = session.status;
+                document.getElementById('chat-session-status').className = `status status-${session.status?.toLowerCase()}`;
+
+                // Load history
+                const history = await api(`/sessions/${sessionId}/history`);
+                renderChatMessages(history.messages || []);
+
+                state.chatAttachments = [];
+                document.getElementById('chat-attachments').innerHTML = '';
+                document.getElementById('chat-input').value = '';
+
+                openModal('chat-modal');
+                document.getElementById('chat-input').focus();
+            } catch (e) {
+                showToast('Failed to open chat', 'error');
+            }
+        }
+
+        function renderChatMessages(messages) {
+            const container = document.getElementById('chat-messages');
+            if (!messages.length) {
+                container.innerHTML = '<div class="empty-state text-muted">Start the conversation by sending a message</div>';
+                return;
+            }
+
+            container.innerHTML = messages.map(msg => `
+                <div class="chat-message ${msg.role}">
+                    <div class="chat-message-avatar">${msg.role === 'user' ? '👤' : '🤖'}</div>
+                    <div>
+                        <div class="chat-message-content">${formatMessageContent(msg.content)}</div>
+                        <div class="chat-message-time">${formatTime(msg.timestamp)}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function formatMessageContent(content) {
+            // Basic markdown-like formatting
+            return escapeHtml(content)
+                .replace(/\n/g, '<br>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>');
+        }
+
+        function handleChatKeydown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const content = input.value.trim();
+            if (!content || !state.currentSession) return;
+
+            const sessionId = state.currentSession.session_id;
+
+            // Add user message to UI immediately
+            const container = document.getElementById('chat-messages');
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            container.innerHTML += `
+                <div class="chat-message user">
+                    <div class="chat-message-avatar">👤</div>
+                    <div>
+                        <div class="chat-message-content">${formatMessageContent(content)}</div>
+                        <div class="chat-message-time">Just now</div>
+                    </div>
+                </div>
+            `;
+
+            // Add typing indicator
+            container.innerHTML += `
+                <div class="chat-message assistant" id="typing-indicator">
+                    <div class="chat-message-avatar">🤖</div>
+                    <div class="chat-message-content">
+                        <div class="chat-message-typing">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.scrollTop = container.scrollHeight;
+
+            input.value = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/sessions/${sessionId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: content,
+                        attachments: state.chatAttachments.map(f => f.id),
+                        stream: false
+                    })
+                });
+
+                // Remove typing indicator
+                const typing = document.getElementById('typing-indicator');
+                if (typing) typing.remove();
+
+                if (response.ok) {
+                    const msg = await response.json();
+                    container.innerHTML += `
+                        <div class="chat-message assistant">
+                            <div class="chat-message-avatar">🤖</div>
+                            <div>
+                                <div class="chat-message-content">${formatMessageContent(msg.content)}</div>
+                                <div class="chat-message-time">${formatTime(msg.timestamp)}</div>
+                            </div>
+                        </div>
+                    `;
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    const err = await response.json();
+                    showToast(err.detail || 'Failed to send message', 'error');
+                }
+
+                state.chatAttachments = [];
+                document.getElementById('chat-attachments').innerHTML = '';
+            } catch (e) {
+                const typing = document.getElementById('typing-indicator');
+                if (typing) typing.remove();
+                showToast('Failed to send message', 'error');
+            }
+        }
+
+        function attachChatFile() {
+            document.getElementById('chat-file-input').click();
+        }
+
+        function closeChat() {
+            state.currentSession = null;
+            closeModal('chat-modal');
+            fetchSessions();
+        }
+
+        // Files
+        function setupFileUpload() {
+            // Main file upload zone
+            const zone = document.getElementById('file-upload-zone');
+            const input = document.getElementById('file-input');
+
+            zone?.addEventListener('click', () => input.click());
+            zone?.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('dragover');
+            });
+            zone?.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone?.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                handleFileUpload(e.dataTransfer.files);
+            });
+            input?.addEventListener('change', (e) => handleFileUpload(e.target.files));
+
+            // Task file upload
+            const taskZone = document.getElementById('task-file-upload');
+            const taskInput = document.getElementById('task-file-input');
+
+            taskZone?.addEventListener('click', () => taskInput.click());
+            taskInput?.addEventListener('change', (e) => {
+                Array.from(e.target.files).forEach(file => state.taskFiles.push(file));
+                renderTaskFiles();
+            });
+
+            // Chat file input
+            const chatInput = document.getElementById('chat-file-input');
+            chatInput?.addEventListener('change', (e) => {
+                // Handle chat file attachments
+                Array.from(e.target.files).forEach(file => {
+                    state.chatAttachments.push({ file, id: null });
+                });
+                renderChatAttachments();
+            });
+        }
+
+        function renderTaskFiles() {
+            const container = document.getElementById('task-file-list');
+            container.innerHTML = state.taskFiles.map((file, i) => `
+                <div class="file-item">
+                    <span class="file-item-icon">${getFileIcon(file.type)}</span>
+                    <div class="file-item-info">
+                        <div class="file-item-name">${escapeHtml(file.name)}</div>
+                        <div class="file-item-size">${formatFileSize(file.size)}</div>
+                    </div>
+                    <span class="file-item-remove" onclick="removeTaskFile(${i})">❌</span>
+                </div>
+            `).join('');
+        }
+
+        function removeTaskFile(index) {
+            state.taskFiles.splice(index, 1);
+            renderTaskFiles();
+        }
+
+        function renderChatAttachments() {
+            const container = document.getElementById('chat-attachments');
+            container.innerHTML = state.chatAttachments.map((item, i) => `
+                <div class="chat-attachment">
+                    ${getFileIcon(item.file.type)} ${escapeHtml(item.file.name.slice(0, 20))}
+                    <span class="chat-attachment-remove" onclick="removeChatAttachment(${i})">❌</span>
+                </div>
+            `).join('');
+        }
+
+        function removeChatAttachment(index) {
+            state.chatAttachments.splice(index, 1);
+            renderChatAttachments();
+        }
+
+        async function handleFileUpload(files) {
+            for (const file of files) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    const res = await fetch(`${API_BASE}/files`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        showToast(`Uploaded: ${file.name}`, 'success');
+                    } else {
+                        showToast(`Failed to upload: ${file.name}`, 'error');
+                    }
+                } catch (e) {
+                    showToast(`Failed to upload: ${file.name}`, 'error');
+                }
+            }
+            fetchFiles();
+        }
+
+        async function fetchFiles() {
+            try {
+                const data = await api('/files');
+                state.files = data.items || data || [];
+                renderFiles();
+            } catch (e) {
+                console.error('Failed to fetch files:', e);
+                state.files = [];
+                renderFiles();
+            }
+        }
+
+        function renderFiles() {
+            const tbody = document.getElementById('files-table');
+            if (!state.files.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No files uploaded yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = state.files.map(file => `
+                <tr>
+                    <td>
+                        <span class="d-flex gap-1">
+                            <span>${getFileIcon(file.content_type)}</span>
+                            <span class="text-truncate" style="max-width: 200px">${escapeHtml(file.filename)}</span>
+                        </span>
+                    </td>
+                    <td>${file.content_type || '-'}</td>
+                    <td>${formatFileSize(file.size_bytes)}</td>
+                    <td>${formatDate(file.created_at)}</td>
+                    <td class="table-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="downloadFile('${file.file_id}')">Download</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteFile('${file.file_id}')">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function downloadFile(fileId) {
+            window.open(`${API_BASE}/files/${fileId}/download`, '_blank');
+        }
+
+        async function deleteFile(fileId) {
+            if (!confirm('Are you sure you want to delete this file?')) return;
+
+            try {
+                await api(`/files/${fileId}`, { method: 'DELETE' });
+                showToast('File deleted', 'success');
+                fetchFiles();
+            } catch (e) {
+                showToast('Failed to delete file', 'error');
+            }
+        }
+
+        // Helpers
+        function populateAgentSelects() {
+            const selects = [
+                document.getElementById('task-agent-select'),
+                document.getElementById('session-agent-select'),
+                document.getElementById('step-agent-select')
+            ];
+
+            selects.forEach(select => {
+                if (!select) return;
+                const firstOption = select.querySelector('option');
+                select.innerHTML = '';
+                if (firstOption) select.appendChild(firstOption);
+
+                state.agents.forEach(agent => {
+                    const option = document.createElement('option');
+                    option.value = agent.agent_id;
+                    option.textContent = agent.name;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatTime(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes) return '-';
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let i = 0;
+            while (bytes >= 1024 && i < units.length - 1) {
+                bytes /= 1024;
+                i++;
+            }
+            return `${bytes.toFixed(1)} ${units[i]}`;
+        }
+
+        function getFileIcon(type) {
+            if (!type) return '📄';
+            if (type.includes('pdf')) return '📕';
+            if (type.includes('word') || type.includes('document')) return '📘';
+            if (type.includes('image')) return '🖼️';
+            if (type.includes('video')) return '🎬';
+            if (type.includes('audio')) return '🎵';
+            if (type.includes('zip') || type.includes('archive')) return '📦';
+            if (type.includes('text') || type.includes('json')) return '📝';
+            return '📄';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Close modal on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
+        });
+
+        // Close modal on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

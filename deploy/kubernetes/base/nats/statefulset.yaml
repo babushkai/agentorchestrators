@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nats
+  namespace: agent-orchestrator
+  labels:
+    app.kubernetes.io/name: nats
+    app.kubernetes.io/component: messaging
+spec:
+  serviceName: nats
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nats
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nats
+    spec:
+      containers:
+        - name: nats
+          image: nats:2.10-alpine
+          args:
+            - "--jetstream"
+            - "--store_dir=/data"
+            - "-m=8222"
+            - "--max_payload=8MB"
+          ports:
+            - name: client
+              containerPort: 4222
+            - name: monitor
+              containerPort: 8222
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: monitor
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: monitor
+            initialDelaySeconds: 5
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+  namespace: agent-orchestrator
+  labels:
+    app.kubernetes.io/name: nats
+spec:
+  type: ClusterIP
+  ports:
+    - name: client
+      port: 4222
+      targetPort: client
+    - name: monitor
+      port: 8222
+      targetPort: monitor
+  selector:
+    app.kubernetes.io/name: nats

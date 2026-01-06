@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(python -c:*)",
+      "Bash(timeout 10 agent-orchestrator worker:*)",
+      "Bash(agent-orchestrator worker:*)",
+      "Bash(agent-orchestrator:*)",
+      "Bash(lsof:*)",
+      "Bash(ps:*)",
+      "Bash(docker ps:*)",
+      "Bash(curl:*)",
+      "Bash(xargs kill:*)",
+      "Bash(docker system:*)",
+      "Bash(docker build:*)",
+      "Bash(kubectl kustomize:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: orchestrator-ingress
+  namespace: agent-orchestrator
+  labels:
+    app.kubernetes.io/name: agent-orchestrator
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    # Enable WebSocket support
+    nginx.ingress.kubernetes.io/websocket-services: "orchestrator-api"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: orchestrator.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: orchestrator-api
+                port:
+                  number: 8000

@@ -1,0 +1,123 @@
+services:
+  # NATS with JetStream
+  nats:
+    image: nats:2.10-alpine
+    container_name: agent-orchestrator-nats
+    command: ["--jetstream", "--store_dir", "/data", "-m", "8222"]
+    ports:
+      - "4222:4222"   # Client connections
+      - "8222:8222"   # HTTP monitoring
+    volumes:
+      - nats-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: agent-orchestrator-postgres
+    environment:
+      POSTGRES_USER: orchestrator
+      POSTGRES_PASSWORD: orchestrator_dev
+      POSTGRES_DB: agent_orchestrator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orchestrator -d agent_orchestrator"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: agent-orchestrator-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # MinIO (S3-compatible object storage)
+  minio:
+    image: minio/minio:latest
+    container_name: agent-orchestrator-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Jaeger (Distributed Tracing)
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    container_name: agent-orchestrator-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:14269/"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Prometheus (Metrics)
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: agent-orchestrator-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      - jaeger
+
+  # Grafana (Dashboards)
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: agent-orchestrator-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  nats-data:
+  postgres-data:
+  redis-data:
+  minio-data:
+  prometheus-data:
+  grafana-data:

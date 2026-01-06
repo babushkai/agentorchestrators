@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: agent-orchestrator-staging
+
+resources:
+  - ../../base
+
+namePrefix: staging-
+
+commonLabels:
+  environment: staging
+
+replicas:
+  - name: agent-orchestrator-api
+    count: 2
+
+configMapGenerator:
+  - name: agent-orchestrator-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=staging
+      - API_DEBUG=false
+      - OTEL_ENABLED=true
