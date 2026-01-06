@@ -31,7 +31,8 @@
       "Bash(while read key)",
       "Bash(do docker exec orchestrator-redis redis-cli GET \"$key\")",
       "Bash(done)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(docker builder prune:*)"
     ]
   }
 }

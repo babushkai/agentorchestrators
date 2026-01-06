@@ -8,7 +8,7 @@ from uuid import UUID
 import structlog
 
 from agent_orchestrator.config import Settings
-from agent_orchestrator.core.agents import AgentDefinition, AgentInstance, AgentStatus
+from agent_orchestrator.core.agents import AgentDefinition, AgentInstance, AgentStatus, ModelConfig, ModelProvider
 from agent_orchestrator.core.agents.runtime import AgentRuntime, AgentRuntimeFactory
 from agent_orchestrator.core.agents.tools import ToolRegistry, create_builtin_tools
 from agent_orchestrator.core.workflows import Task, TaskStatus
@@ -190,8 +190,6 @@ class AgentWorker:
             agent_data = await self._redis.get(f"agent:{agent_id}")
             if agent_data:
                 # Build AgentDefinition from stored data
-                from agent_orchestrator.core.agents.definition import ModelConfig
-
                 llm_config_data = agent_data.get("llm_config", {})
                 definition = AgentDefinition(
                     agent_id=UUID(agent_data["agent_id"]),
@@ -225,11 +223,17 @@ class AgentWorker:
             "Using default agent - no agent_id provided or agent not found",
             agent_id=str(agent_id) if agent_id else None,
         )
+        # Use settings for default LLM config
+        default_llm_config = ModelConfig(
+            provider=ModelProvider(self._settings.llm.default_provider),
+            model_id=self._settings.llm.default_model,
+        )
         definition = AgentDefinition(
             name="Worker Agent",
             role="General purpose task executor",
             goal="Complete the assigned task efficiently and accurately",
             capabilities=task.required_capabilities,
+            llm_config=default_llm_config,
         )
 
         return self._runtime_factory.create(
