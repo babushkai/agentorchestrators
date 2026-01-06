@@ -16,6 +16,7 @@ from agent_orchestrator.infrastructure.llm.providers.base import (
     LLMResponse,
 )
 from agent_orchestrator.infrastructure.llm.providers.openai import OpenAIProvider
+from agent_orchestrator.infrastructure.llm.providers.openrouter import OpenRouterProvider
 
 logger = structlog.get_logger(__name__)
 
@@ -39,12 +40,23 @@ class LLMClient:
             logger.info("Anthropic provider initialized")
 
         if self._settings.openai_api_key:
-            self._providers["openai"] = OpenAIProvider(
-                api_key=self._settings.openai_api_key.get_secret_value(),
-                timeout=self._settings.timeout,
-                max_retries=self._settings.max_retries,
-            )
-            logger.info("OpenAI provider initialized")
+            api_key = self._settings.openai_api_key.get_secret_value()
+
+            # Check if it's an OpenRouter key (starts with sk-or-)
+            if api_key.startswith("sk-or-"):
+                self._providers["openrouter"] = OpenRouterProvider(
+                    api_key=api_key,
+                    timeout=self._settings.timeout,
+                    max_retries=self._settings.max_retries,
+                )
+                logger.info("OpenRouter provider initialized")
+            else:
+                self._providers["openai"] = OpenAIProvider(
+                    api_key=api_key,
+                    timeout=self._settings.timeout,
+                    max_retries=self._settings.max_retries,
+                )
+                logger.info("OpenAI provider initialized")
 
     def get_provider(self, provider: ModelProvider | str) -> LLMProvider:
         """Get a provider by name."""

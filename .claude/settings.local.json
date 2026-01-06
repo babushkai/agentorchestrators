@@ -22,7 +22,8 @@
       "Bash(docker-compose ps:*)",
       "Bash(docker exec:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
