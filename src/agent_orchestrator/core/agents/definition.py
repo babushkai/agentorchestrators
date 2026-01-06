@@ -23,6 +23,7 @@ class ModelProvider(str, Enum):
 
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
+    OPENROUTER = "openrouter"
     BEDROCK = "bedrock"
     LOCAL = "local"
 
