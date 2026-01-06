@@ -27,7 +27,11 @@
       "Bash(gh --version:*)",
       "Bash(gh auth status:*)",
       "Bash(gh repo create:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(while read key)",
+      "Bash(do docker exec orchestrator-redis redis-cli GET \"$key\")",
+      "Bash(done)",
+      "Bash(xargs:*)"
     ]
   }
 }

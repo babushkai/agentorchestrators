@@ -87,7 +87,7 @@ class LLMSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="LLM_")
 
-    default_provider: Literal["anthropic", "openai"] = "anthropic"
+    default_provider: Literal["anthropic", "openai", "openrouter"] = "anthropic"
     anthropic_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
     default_model: str = "claude-sonnet-4-20250514"
