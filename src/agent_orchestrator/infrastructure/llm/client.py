@@ -5,7 +5,8 @@ from typing import Any
 
 import structlog
 from circuitbreaker import circuit
-from tenacity import retry, stop_after_attempt, wait_exponential
+from openai import RateLimitError
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from agent_orchestrator.config import LLMSettings
 from agent_orchestrator.core.agents.definition import ModelProvider
@@ -68,8 +69,9 @@ class LLMClient:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception(lambda e: not isinstance(e, RateLimitError)),
     )
-    @circuit(failure_threshold=5, recovery_timeout=60)
+    @circuit(failure_threshold=5, recovery_timeout=30)
     async def complete(
         self,
         messages: list[LLMMessage],
