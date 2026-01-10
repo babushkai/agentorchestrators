@@ -33,7 +33,8 @@
       "Bash(done)",
       "Bash(xargs:*)",
       "Bash(docker builder prune:*)",
-      "Bash(docker volume rm:*)"
+      "Bash(docker volume rm:*)",
+      "Bash(python -m py_compile:*)"
     ]
   }
 }

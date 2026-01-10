@@ -82,12 +82,35 @@ class S3Settings(BaseSettings):
     region: str = "us-east-1"
 
 
+class LocalLLMSettings(BaseSettings):
+    """Local LLM provider configuration (Ollama/LM Studio)."""
+
+    model_config = SettingsConfigDict(env_prefix="LOCAL_LLM_")
+
+    enabled: bool = False
+    backend: Literal["ollama", "lmstudio"] = "ollama"
+    base_url: str | None = None  # Auto-detected if None
+    default_model: str = "llama3.2:3b"
+    timeout: float = Field(default=300.0, ge=1.0)  # Longer for local models
+    max_retries: int = Field(default=1, ge=0)
+
+
+class FallbackSettings(BaseSettings):
+    """LLM fallback configuration."""
+
+    model_config = SettingsConfigDict(env_prefix="LLM_FALLBACK_")
+
+    enabled: bool = True
+    fallback_provider: Literal["local", "anthropic", "openai"] = "local"
+    fallback_on_rate_limit: bool = True
+
+
 class LLMSettings(BaseSettings):
     """LLM provider configuration."""
 
     model_config = SettingsConfigDict(env_prefix="LLM_")
 
-    default_provider: Literal["anthropic", "openai", "openrouter"] = "anthropic"
+    default_provider: Literal["anthropic", "openai", "openrouter", "local"] = "anthropic"
     anthropic_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
     default_model: str = "claude-sonnet-4-20250514"
@@ -95,6 +118,12 @@ class LLMSettings(BaseSettings):
     default_max_tokens: int = Field(default=4096, ge=1)
     timeout: float = Field(default=120.0, ge=1.0)
     max_retries: int = Field(default=3, ge=0)
+
+    # Local LLM settings
+    local: LocalLLMSettings = Field(default_factory=LocalLLMSettings)
+
+    # Fallback settings
+    fallback: FallbackSettings = Field(default_factory=FallbackSettings)
 
 
 class TelemetrySettings(BaseSettings):
