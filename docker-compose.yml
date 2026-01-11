@@ -136,6 +136,10 @@ services:
       NATS_SERVERS: '["nats://nats:4222"]'
       S3_ENDPOINT_URL: http://minio:9000
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      # Local LLM should connect to host machine's Ollama
+      LOCAL_LLM_BASE_URL: http://host.docker.internal:11434/v1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -166,6 +170,10 @@ services:
       NATS_SERVERS: '["nats://nats:4222"]'
       S3_ENDPOINT_URL: http://minio:9000
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      # Local LLM should connect to host machine's Ollama
+      LOCAL_LLM_BASE_URL: http://host.docker.internal:11434/v1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       api:
         condition: service_healthy
@@ -188,6 +196,10 @@ services:
       NATS_SERVERS: '["nats://nats:4222"]'
       S3_ENDPOINT_URL: http://minio:9000
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      # Local LLM should connect to host machine's Ollama
+      LOCAL_LLM_BASE_URL: http://host.docker.internal:11434/v1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       api:
         condition: service_healthy
