@@ -103,3 +103,23 @@ export interface HealthStatus {
   environment: string
   checks: Record<string, boolean>
 }
+
+export interface FileMetadata {
+  file_id: string
+  task_id: string | null
+  session_id: string | null
+  filename: string
+  original_filename: string
+  content_type: string
+  size_bytes: number
+  storage_path: string
+  checksum: string
+  parse_status: string
+  parsed_content: string | null
+  created_at: string
+}
+
+export interface FileListResponse {
+  files: FileMetadata[]
+  count: number
+}

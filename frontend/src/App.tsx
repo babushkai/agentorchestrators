@@ -3,6 +3,11 @@ import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-quer
 import { Header } from "@/components/layout/Header"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Dashboard } from "@/components/pages/Dashboard"
+import { Agents } from "@/components/pages/Agents"
+import { Tasks } from "@/components/pages/Tasks"
+import { Conversations } from "@/components/pages/Conversations"
+import { Workflows } from "@/components/pages/Workflows"
+import { Files } from "@/components/pages/Files"
 import * as api from "@/api/client"
 
 const queryClient = new QueryClient({
@@ -76,38 +81,47 @@ function AppContent() {
         )
       case "tasks":
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Tasks</h2>
-            <p className="text-muted-foreground">Task management coming soon...</p>
-          </div>
+          <Tasks
+            tasks={tasks}
+            agents={agents}
+            onRefresh={handleRefresh}
+            isLoading={tasksLoading}
+          />
         )
       case "agents":
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Agents</h2>
-            <p className="text-muted-foreground">Agent management coming soon...</p>
-          </div>
+          <Agents
+            agents={agents}
+            onRefresh={handleRefresh}
+            isLoading={tasksLoading}
+          />
         )
       case "workflows":
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Workflows</h2>
-            <p className="text-muted-foreground">Workflow management coming soon...</p>
-          </div>
+          <Workflows
+            workflows={workflows}
+            agents={agents}
+            onRefresh={handleRefresh}
+            isLoading={tasksLoading}
+          />
         )
       case "conversations":
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Conversations</h2>
-            <p className="text-muted-foreground">Chat interface coming soon...</p>
-          </div>
+          <Conversations
+            sessions={sessions}
+            agents={agents}
+            onRefresh={handleRefresh}
+            isLoading={tasksLoading}
+          />
         )
       case "files":
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Files</h2>
-            <p className="text-muted-foreground">File management coming soon...</p>
-          </div>
+          <Files
+            tasks={tasks}
+            sessions={sessions}
+            onRefresh={handleRefresh}
+            isLoading={tasksLoading}
+          />
         )
       default:
         return null

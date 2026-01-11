@@ -8,6 +8,8 @@ import type {
   Message,
   Workflow,
   HealthStatus,
+  FileMetadata,
+  FileListResponse,
 } from '@/types/api'
 
 const API_BASE = '/api/v1'
@@ -114,4 +116,59 @@ export async function getWorkflows(): Promise<Workflow[]> {
 
 export async function getWorkflow(workflowId: string): Promise<Workflow> {
   return fetchApi<Workflow>(`/workflows/${workflowId}`)
+}
+
+// Files
+export async function getTaskFiles(taskId: string): Promise<FileListResponse> {
+  return fetchApi<FileListResponse>(`/tasks/${taskId}/files`)
+}
+
+export async function getSessionFiles(sessionId: string): Promise<FileListResponse> {
+  return fetchApi<FileListResponse>(`/sessions/${sessionId}/files`)
+}
+
+export async function getFile(fileId: string): Promise<FileMetadata> {
+  return fetchApi<FileMetadata>(`/files/${fileId}`)
+}
+
+export async function uploadTaskFile(taskId: string, file: File): Promise<FileMetadata> {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  const response = await fetch(`${API_BASE}/tasks/${taskId}/files`, {
+    method: 'POST',
+    body: formData,
+  })
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+    throw new Error(error.detail || `HTTP ${response.status}`)
+  }
+  
+  return response.json()
+}
+
+export async function uploadSessionFile(sessionId: string, file: File): Promise<FileMetadata> {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  const response = await fetch(`${API_BASE}/sessions/${sessionId}/files`, {
+    method: 'POST',
+    body: formData,
+  })
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+    throw new Error(error.detail || `HTTP ${response.status}`)
+  }
+  
+  return response.json()
+}
+
+export async function deleteFile(fileId: string): Promise<void> {
+  await fetchApi<void>(`/files/${fileId}`, { method: 'DELETE' })
+}
+
+export function getFileDownloadUrl(fileId: string): string {
+  return `${API_BASE}/files/${fileId}/download`
 }
