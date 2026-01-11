@@ -2,8 +2,6 @@
 
 from typing import Any, Literal
 
-from openai import AsyncOpenAI
-
 from agent_orchestrator.infrastructure.llm.providers.openai import OpenAIProvider
 
 
@@ -48,14 +46,6 @@ class LocalProvider(OpenAIProvider):
         # Local LLMs don't need API keys, but OpenAI client requires one
         # Initialize with placeholder key
         super().__init__(
-            api_key="local-no-key-needed",
-            base_url=self._base_url,
-            timeout=timeout,
-            max_retries=max_retries,
-        )
-
-        # Recreate client to ensure proper configuration
-        self._client = AsyncOpenAI(
             api_key="local-no-key-needed",
             base_url=self._base_url,
             timeout=timeout,

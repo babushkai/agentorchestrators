@@ -5,7 +5,8 @@ from typing import Any
 
 import structlog
 from circuitbreaker import circuit
-from openai import RateLimitError
+from anthropic import RateLimitError as AnthropicRateLimitError
+from openai import RateLimitError as OpenAIRateLimitError
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from agent_orchestrator.config import LLMSettings
@@ -21,6 +22,11 @@ from agent_orchestrator.infrastructure.llm.providers.openai import OpenAIProvide
 from agent_orchestrator.infrastructure.llm.providers.openrouter import OpenRouterProvider
 
 logger = structlog.get_logger(__name__)
+
+
+def _is_rate_limit_error(error: BaseException) -> bool:
+    """Check if error is a rate limit error from any provider."""
+    return isinstance(error, (OpenAIRateLimitError, AnthropicRateLimitError))
 
 
 class LLMClient:
@@ -77,15 +83,19 @@ class LLMClient:
             )
 
         # Set fallback provider if configured and available
-        if (
-            self._settings.fallback.enabled
-            and self._settings.fallback.fallback_provider in self._providers
-        ):
-            self._fallback_provider_name = self._settings.fallback.fallback_provider
-            logger.info(
-                "Fallback provider configured",
-                fallback_provider=self._fallback_provider_name,
-            )
+        if self._settings.fallback.enabled:
+            if self._settings.fallback.fallback_provider in self._providers:
+                self._fallback_provider_name = self._settings.fallback.fallback_provider
+                logger.info(
+                    "Fallback provider configured",
+                    fallback_provider=self._fallback_provider_name,
+                )
+            else:
+                logger.warning(
+                    "Fallback enabled but provider not available",
+                    fallback_provider=self._settings.fallback.fallback_provider,
+                    available_providers=list(self._providers.keys()),
+                )
 
     def get_provider(self, provider: ModelProvider | str) -> LLMProvider:
         """Get a provider by name."""
@@ -100,12 +110,16 @@ class LLMClient:
             return self._settings.local.default_model
         return self._settings.default_model
 
-    def _should_fallback(self, error: Exception) -> bool:
+    def _should_fallback(self, error: Exception, provider_name: str) -> bool:
         """Determine if we should fallback based on the error type."""
         if not self._settings.fallback.enabled or not self._fallback_provider_name:
             return False
 
-        if isinstance(error, RateLimitError):
+        # Prevent fallback to same provider
+        if provider_name == self._fallback_provider_name:
+            return False
+
+        if _is_rate_limit_error(error):
             return self._settings.fallback.fallback_on_rate_limit
 
         return False
@@ -138,12 +152,12 @@ class LLMClient:
             )
             return response
 
-        except RateLimitError as e:
-            if not self._should_fallback(e):
+        except Exception as e:
+            if not _is_rate_limit_error(e) or not self._should_fallback(e, provider_name):
                 raise
 
             # Log and execute fallback
-            fallback_model = self._get_fallback_model(self._fallback_provider_name)
+            fallback_model = self._get_fallback_model(self._fallback_provider_name)  # type: ignore[arg-type]
 
             logger.warning(
                 "Rate limit hit, falling back to alternative provider",
@@ -154,7 +168,7 @@ class LLMClient:
                 error=str(e),
             )
 
-            fallback_provider = self.get_provider(self._fallback_provider_name)
+            fallback_provider = self.get_provider(self._fallback_provider_name)  # type: ignore[arg-type]
 
             return await fallback_provider.complete(
                 messages=messages,
@@ -170,7 +184,7 @@ class LLMClient:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception(lambda e: not isinstance(e, RateLimitError)),
+        retry=retry_if_exception(lambda e: not _is_rate_limit_error(e)),
     )
     @circuit(failure_threshold=5, recovery_timeout=30)
     async def complete(
@@ -277,11 +291,11 @@ class LLMClient:
                 **kwargs,
             ):
                 yield chunk
-        except RateLimitError as e:
-            if not enable_fallback or not self._should_fallback(e):
+        except Exception as e:
+            if not _is_rate_limit_error(e) or not enable_fallback or not self._should_fallback(e, provider_name):
                 raise
 
-            fallback_model = self._get_fallback_model(self._fallback_provider_name)
+            fallback_model = self._get_fallback_model(self._fallback_provider_name)  # type: ignore[arg-type]
             logger.warning(
                 "Rate limit hit during streaming, falling back",
                 original_provider=provider_name,
@@ -289,7 +303,7 @@ class LLMClient:
                 fallback_model=fallback_model,
             )
 
-            fallback_provider = self.get_provider(self._fallback_provider_name)
+            fallback_provider = self.get_provider(self._fallback_provider_name)  # type: ignore[arg-type]
             async for chunk in fallback_provider.stream(
                 messages=messages,
                 model=fallback_model,
