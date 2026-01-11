@@ -1,33 +1,37 @@
+import path from "path"
+import { fileURLToPath } from "url"
 import { defineConfig } from 'vite'
-import solid from 'vite-plugin-solid'
-import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
+import react from '@vitejs/plugin-react'
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// https://vite.dev/config/
 export default defineConfig({
-  plugins: [solid(), tailwindcss()],
+  plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
   server: {
     proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
+      "/api": {
+        target: "http://localhost:8000",
         changeOrigin: true,
       },
-      '/health': {
-        target: 'http://localhost:8000',
+      "/agents": {
+        target: "http://localhost:8000",
         changeOrigin: true,
       },
-      '/ws': {
-        target: 'ws://localhost:8000',
-        ws: true,
+      "/tasks": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/conversations": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
       },
     },
-  },
-  build: {
-    outDir: '../src/agent_orchestrator/api/static',
-    emptyOutDir: true,
   },
 })
