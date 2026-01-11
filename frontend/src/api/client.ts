@@ -1,0 +1,117 @@
+import type {
+  Agent,
+  AgentCreate,
+  Task,
+  TaskCreate,
+  Session,
+  SessionCreate,
+  Message,
+  Workflow,
+  HealthStatus,
+} from '@/types/api'
+
+const API_BASE = '/api/v1'
+
+async function fetchApi<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+    ...options,
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+    throw new Error(error.detail || `HTTP ${response.status}`)
+  }
+
+  return response.json()
+}
+
+// Health
+export async function getHealth(): Promise<HealthStatus> {
+  const response = await fetch('/health')
+  return response.json()
+}
+
+// Agents
+export async function getAgents(): Promise<Agent[]> {
+  return fetchApi<Agent[]>('/agents')
+}
+
+export async function getAgent(agentId: string): Promise<Agent> {
+  return fetchApi<Agent>(`/agents/${agentId}`)
+}
+
+export async function createAgent(data: AgentCreate): Promise<Agent> {
+  return fetchApi<Agent>('/agents', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteAgent(agentId: string): Promise<void> {
+  await fetchApi<void>(`/agents/${agentId}`, { method: 'DELETE' })
+}
+
+// Tasks
+export async function getTasks(): Promise<Task[]> {
+  return fetchApi<Task[]>('/tasks')
+}
+
+export async function getTask(taskId: string): Promise<Task> {
+  return fetchApi<Task>(`/tasks/${taskId}`)
+}
+
+export async function createTask(data: TaskCreate): Promise<Task> {
+  return fetchApi<Task>('/tasks', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+// Sessions
+export async function getSessions(): Promise<Session[]> {
+  return fetchApi<Session[]>('/sessions')
+}
+
+export async function getSession(sessionId: string): Promise<Session> {
+  return fetchApi<Session>(`/sessions/${sessionId}`)
+}
+
+export async function createSession(data: SessionCreate): Promise<Session> {
+  return fetchApi<Session>('/sessions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function getSessionHistory(
+  sessionId: string,
+  limit = 50
+): Promise<{ messages: Message[]; total_count: number }> {
+  return fetchApi(`/sessions/${sessionId}/history?limit=${limit}`)
+}
+
+export async function sendMessage(
+  sessionId: string,
+  content: string
+): Promise<Message> {
+  return fetchApi<Message>(`/sessions/${sessionId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  })
+}
+
+// Workflows
+export async function getWorkflows(): Promise<Workflow[]> {
+  return fetchApi<Workflow[]>('/workflows')
+}
+
+export async function getWorkflow(workflowId: string): Promise<Workflow> {
+  return fetchApi<Workflow>(`/workflows/${workflowId}`)
+}
