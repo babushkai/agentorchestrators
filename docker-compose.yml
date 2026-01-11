@@ -15,9 +15,9 @@ services:
       timeout: 3s
       retries: 5
 
-  # PostgreSQL
+  # PostgreSQL with pgvector extension
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: agent-orchestrator-postgres
     environment:
       POSTGRES_USER: orchestrator
