@@ -1,29 +1,75 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Inter';
+  src: url('https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.woff2') format('woff2');
+  font-weight: 100 800;
+  font-display: swap;
+}
+
 @theme {
-  --color-background: #0f172a;
-  --color-foreground: #f8fafc;
-  --color-card: #1e293b;
-  --color-card-foreground: #f8fafc;
-  --color-primary: #3b82f6;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #334155;
-  --color-secondary-foreground: #f8fafc;
-  --color-muted: #475569;
-  --color-muted-foreground: #94a3b8;
-  --color-accent: #1e293b;
-  --color-accent-foreground: #f8fafc;
-  --color-destructive: #ef4444;
-  --color-destructive-foreground: #ffffff;
-  --color-success: #22c55e;
+  /* Background Colors - Deep Grays */
+  --color-background: #0a0a0b;
+  --color-foreground: #fafafa;
+  --color-card: #141416;
+  --color-card-foreground: #fafafa;
+  --color-popover: #1c1c1f;
+  --color-popover-foreground: #fafafa;
+  
+  /* Elevated surfaces */
+  --color-elevated: #242428;
+  
+  /* Primary - Cyan accent */
+  --color-primary: #06b6d4;
+  --color-primary-foreground: #0a0a0b;
+  
+  /* Secondary */
+  --color-secondary: #1c1c1f;
+  --color-secondary-foreground: #a1a1aa;
+  
+  /* Muted */
+  --color-muted: #27272a;
+  --color-muted-foreground: #71717a;
+  
+  /* Accent */
+  --color-accent: #1c1c1f;
+  --color-accent-foreground: #fafafa;
+  
+  /* Semantic Colors */
+  --color-destructive: #f43f5e;
+  --color-destructive-foreground: #fafafa;
+  --color-success: #10b981;
+  --color-success-foreground: #0a0a0b;
   --color-warning: #f59e0b;
-  --color-info: #06b6d4;
-  --color-border: #334155;
-  --color-input: #1e293b;
-  --color-ring: #3b82f6;
-  --radius-lg: 0.75rem;
-  --radius-md: 0.5rem;
-  --radius-sm: 0.25rem;
+  --color-warning-foreground: #0a0a0b;
+  --color-info: #3b82f6;
+  --color-info-foreground: #fafafa;
+  
+  /* Agent States */
+  --color-agent-idle: #71717a;
+  --color-agent-running: #06b6d4;
+  --color-agent-success: #10b981;
+  --color-agent-error: #f43f5e;
+  --color-agent-pending: #f59e0b;
+  
+  /* Borders */
+  --color-border: #27272a;
+  --color-border-hover: #3f3f46;
+  --color-input: #141416;
+  --color-ring: #06b6d4;
+  
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
 }
 
 * {
@@ -34,27 +80,80 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--color-background);
   color: var(--color-foreground);
   min-height: 100vh;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
+/* Monospace for code */
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* Custom scrollbar - minimal */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-background);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-muted);
-  border-radius: 4px;
+  background: #27272a;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted-foreground);
+  background: #3f3f46;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: rgba(6, 182, 212, 0.3);
+  color: #fafafa;
+}
+
+/* Transitions */
+.transition-fast { transition: all 150ms ease; }
+.transition-base { transition: all 200ms ease; }
+.transition-slow { transition: all 300ms ease; }
+
+/* Animation keyframes */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 200ms ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 150ms ease-out;
 }

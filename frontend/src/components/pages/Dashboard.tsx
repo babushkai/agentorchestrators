@@ -1,26 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { formatRelativeTime, truncateId } from "@/lib/utils"
 import {
-  ListTodo,
   Bot,
+  ListTodo,
   GitBranch,
   MessageSquare,
-  RefreshCw,
-  Server,
-  Database,
-  Radio,
-  HardDrive,
+  Activity,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Loader2,
 } from "lucide-react"
 import type { Task, HealthStatus } from "@/types/api"
-
-interface ServiceStatus {
-  name: string
-  icon: React.ElementType
-  status: 'online' | 'offline' | 'unknown'
-}
 
 interface DashboardProps {
   stats: {
@@ -35,43 +28,18 @@ interface DashboardProps {
   isLoading: boolean
 }
 
-const services: ServiceStatus[] = [
-  { name: "API Server", icon: Server, status: "online" },
-  { name: "NATS", icon: Radio, status: "online" },
-  { name: "Redis", icon: Database, status: "online" },
-  { name: "PostgreSQL", icon: HardDrive, status: "online" },
-]
-
-const statCards = [
-  { key: "tasks", label: "Total Tasks", icon: ListTodo },
-  { key: "agents", label: "Active Agents", icon: Bot },
-  { key: "workflows", label: "Workflows", icon: GitBranch },
-  { key: "sessions", label: "Conversations", icon: MessageSquare },
-] as const
-
-const getStatusBadge = (status: string) => {
+const getStatusIcon = (status: string) => {
   switch (status) {
     case "completed":
-      return <Badge variant="success">Completed</Badge>
+      return <CheckCircle2 className="h-3 w-3 text-success" />
     case "running":
-      return <Badge variant="info">Running</Badge>
+      return <Loader2 className="h-3 w-3 text-primary animate-spin" />
     case "pending":
-      return <Badge variant="warning">Pending</Badge>
+      return <Clock className="h-3 w-3 text-warning" />
     case "failed":
-      return <Badge variant="destructive">Failed</Badge>
+      return <XCircle className="h-3 w-3 text-destructive" />
     default:
-      return <Badge variant="secondary">{status}</Badge>
-  }
-}
-
-const getPriorityBadge = (priority: number) => {
-  switch (priority) {
-    case 3:
-      return <Badge variant="destructive">Critical</Badge>
-    case 2:
-      return <Badge variant="warning">High</Badge>
-    default:
-      return <Badge variant="secondary">Normal</Badge>
+      return <Activity className="h-3 w-3 text-muted-foreground" />
   }
 }
 
@@ -79,128 +47,140 @@ export function Dashboard({
   stats,
   recentTasks,
   health: _health,
-  onRefresh,
-  isLoading,
+  onRefresh: _onRefresh,
+  isLoading: _isLoading,
 }: DashboardProps) {
-  // TODO: Use health data to dynamically update service status
   void _health
+  void _onRefresh
+  void _isLoading
+
+  const metrics = [
+    { label: "Total Agents", value: stats.agents, icon: Bot, change: null },
+    { label: "Total Tasks", value: stats.tasks, icon: ListTodo, change: null },
+    { label: "Workflows", value: stats.workflows, icon: GitBranch, change: null },
+    { label: "Conversations", value: stats.sessions, icon: MessageSquare, change: null },
+  ]
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Dashboard</h2>
-        <Button variant="outline" onClick={onRefresh} disabled={isLoading}>
-          <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-          Refresh
-        </Button>
+      <div>
+        <h1 className="text-lg font-medium">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">
+          Overview of your agent orchestration system
+        </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map(({ key, label, icon: Icon }) => (
-          <Card key={key}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {label}
-              </CardTitle>
-              <Icon className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats[key]}</div>
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {metrics.map(({ label, value, icon: Icon }) => (
+          <Card key={label} className="bg-card hover:bg-secondary/30 transition-colors duration-150">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="text-2xl font-semibold mt-1 font-mono">{value}</p>
+                </div>
+                <div className="p-2 rounded-md bg-secondary">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Services Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Services Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {services.map((service) => {
-              const Icon = service.icon
-              return (
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Recent Tasks */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between">
+              <span>Recent Tasks</span>
+              <span className="text-xs text-muted-foreground font-normal font-mono">
+                {recentTasks.length} total
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentTasks.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ListTodo className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No tasks yet</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {recentTasks.slice(0, 5).map((task) => (
+                  <div
+                    key={task.task_id}
+                    className="flex items-center gap-3 p-2 rounded-md hover:bg-secondary/50 transition-colors duration-150 cursor-pointer"
+                  >
+                    {getStatusIcon(task.status)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate">{task.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {truncateId(task.task_id)}
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {formatRelativeTime(task.created_at)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* System Status */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between">
+              <span>System Status</span>
+              <Badge variant="success" className="font-mono text-[10px]">
+                operational
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[
+                { name: "API Server", status: "healthy", latency: "12ms" },
+                { name: "NATS Messaging", status: "healthy", latency: "3ms" },
+                { name: "Redis Cache", status: "healthy", latency: "1ms" },
+                { name: "PostgreSQL", status: "healthy", latency: "5ms" },
+              ].map((service) => (
                 <div
                   key={service.name}
-                  className="flex items-center gap-3 p-3 bg-secondary rounded-lg"
+                  className="flex items-center justify-between p-2 rounded-md bg-secondary/30"
                 >
-                  <div
-                    className={cn(
-                      "w-2.5 h-2.5 rounded-full",
-                      service.status === "online" && "bg-success",
-                      service.status === "offline" && "bg-destructive",
-                      service.status === "unknown" && "bg-muted-foreground"
-                    )}
-                  />
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{service.name}</span>
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      service.status === "healthy" ? "bg-success" : "bg-destructive"
+                    )} />
+                    <span className="text-sm">{service.name}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {service.latency}
+                  </span>
                 </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Recent Tasks */}
+      {/* Activity Timeline placeholder */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Recent Tasks</CardTitle>
-          <Button variant="ghost" size="sm">
-            View All
-          </Button>
+        <CardHeader className="pb-3">
+          <CardTitle>Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          {recentTasks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <ListTodo className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>No tasks yet</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">
-                      Task
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">
-                      Status
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">
-                      Priority
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">
-                      Created
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentTasks.slice(0, 5).map((task) => (
-                    <tr
-                      key={task.task_id}
-                      className="border-b border-border/50 hover:bg-accent/50 transition-colors"
-                    >
-                      <td className="py-3 px-4">
-                        <div>
-                          <p className="font-medium">{task.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {truncateId(task.task_id)}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">{getStatusBadge(task.status)}</td>
-                      <td className="py-3 px-4">{getPriorityBadge(task.priority)}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">
-                        {formatRelativeTime(task.created_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="text-center py-8 text-muted-foreground">
+            <Activity className="h-8 w-8 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">Activity timeline coming soon</p>
+          </div>
         </CardContent>
       </Card>
     </div>

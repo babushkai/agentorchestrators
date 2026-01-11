@@ -40,9 +40,18 @@ export async function getHealth(): Promise<HealthStatus> {
   return response.json()
 }
 
+// Helper for paginated responses
+interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  page_size: number
+}
+
 // Agents
 export async function getAgents(): Promise<Agent[]> {
-  return fetchApi<Agent[]>('/agents')
+  const response = await fetchApi<PaginatedResponse<Agent>>('/agents')
+  return response.items
 }
 
 export async function getAgent(agentId: string): Promise<Agent> {
@@ -62,7 +71,8 @@ export async function deleteAgent(agentId: string): Promise<void> {
 
 // Tasks
 export async function getTasks(): Promise<Task[]> {
-  return fetchApi<Task[]>('/tasks')
+  const response = await fetchApi<PaginatedResponse<Task>>('/tasks')
+  return response.items
 }
 
 export async function getTask(taskId: string): Promise<Task> {
@@ -111,7 +121,8 @@ export async function sendMessage(
 
 // Workflows
 export async function getWorkflows(): Promise<Workflow[]> {
-  return fetchApi<Workflow[]>('/workflows')
+  const response = await fetchApi<PaginatedResponse<Workflow>>('/workflows')
+  return response.items
 }
 
 export async function getWorkflow(workflowId: string): Promise<Workflow> {

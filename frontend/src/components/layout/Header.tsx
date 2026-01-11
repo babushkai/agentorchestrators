@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils"
-import { Zap } from "lucide-react"
 
 interface HeaderProps {
   isConnected: boolean
@@ -7,23 +6,39 @@ interface HeaderProps {
 
 export function Header({ isConnected }: HeaderProps) {
   return (
-    <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-50">
-      <div className="flex items-center gap-3">
-        <Zap className="h-6 w-6 text-primary" />
-        <h1 className="text-lg font-semibold">Agent Orchestrator</h1>
-      </div>
+    <header className="h-12 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+      <div className="flex h-full items-center justify-between px-4">
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
+              <span className="text-xs font-bold text-primary-foreground">A</span>
+            </div>
+            <span className="text-sm font-medium">Agent Orchestrator</span>
+          </div>
+          <span className="text-xs text-muted-foreground font-mono">v0.1.0</span>
+        </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-full">
-          <div
-            className={cn(
-              "w-2 h-2 rounded-full",
-              isConnected ? "bg-success animate-pulse" : "bg-destructive"
-            )}
-          />
-          <span className="text-sm text-muted-foreground">
-            {isConnected ? "Connected" : "Disconnected"}
-          </span>
+        {/* Right side */}
+        <div className="flex items-center gap-4">
+          {/* Command palette hint */}
+          <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
+            <kbd className="px-1.5 py-0.5 rounded bg-secondary border border-border font-mono text-[10px]">⌘</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-secondary border border-border font-mono text-[10px]">K</kbd>
+          </div>
+
+          {/* Connection status */}
+          <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                "w-1.5 h-1.5 rounded-full",
+                isConnected ? "bg-success" : "bg-destructive"
+              )}
+            />
+            <span className="text-xs text-muted-foreground">
+              {isConnected ? "Connected" : "Disconnected"}
+            </span>
+          </div>
         </div>
       </div>
     </header>

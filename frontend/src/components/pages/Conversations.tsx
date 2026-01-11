@@ -13,7 +13,7 @@ import {
   User,
   Loader2,
   X,
-  ChevronRight,
+  ChevronLeft,
   Wrench,
 } from "lucide-react"
 import type { Agent, Session, SessionCreate } from "@/types/api"
@@ -55,10 +55,10 @@ function CreateSessionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <Card className="relative z-10 w-full max-w-md mx-4">
-        <CardHeader className="flex flex-row items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <Card className="relative z-10 w-full max-w-md mx-4 animate-slide-in-right">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle>New Conversation</CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -66,8 +66,8 @@ function CreateSessionModal({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Conversation Name</label>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">Name</label>
               <Input
                 placeholder="e.g., Research project discussion"
                 value={formData.name}
@@ -77,39 +77,39 @@ function CreateSessionModal({
                 required
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Select Agent</label>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">Select Agent</label>
               {agents.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground py-4 text-center">
                   No agents available. Create an agent first.
                 </p>
               ) : (
-                <div className="grid gap-2">
+                <div className="space-y-2 max-h-[240px] overflow-y-auto">
                   {agents.map((agent) => (
                     <button
                       key={agent.agent_id}
                       type="button"
                       className={cn(
-                        "flex items-center gap-3 p-3 rounded-lg border text-left transition-colors",
+                        "flex items-center gap-3 w-full p-3 rounded-md border text-left transition-colors duration-150",
                         formData.agent_id === agent.agent_id
                           ? "border-primary bg-primary/5"
-                          : "border-border hover:bg-accent"
+                          : "border-border hover:bg-secondary/50"
                       )}
                       onClick={() =>
                         setFormData({ ...formData, agent_id: agent.agent_id })
                       }
                     >
-                      <div className="p-2 rounded-lg bg-secondary">
-                        <Bot className="h-4 w-4" />
+                      <div className="p-2 rounded-md bg-secondary">
+                        <Bot className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm">{agent.name}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground truncate">
                           {agent.role}
                         </p>
                       </div>
                       <Badge
-                        variant={agent.status === "idle" ? "success" : "info"}
+                        variant={agent.status === "idle" ? "idle" : agent.status === "running" ? "running" : "secondary"}
                       >
                         {agent.status}
                       </Badge>
@@ -118,25 +118,15 @@ function CreateSessionModal({
                 </div>
               )}
             </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="ghost" onClick={onClose}>
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting || !formData.agent_id}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4" />
-                    Start Conversation
-                  </>
-                )}
+                {isSubmitting ? "Starting..." : "Start Chat"}
               </Button>
             </div>
           </form>
@@ -160,7 +150,7 @@ function ChatView({ session, onClose }: ChatViewProps) {
   const { data: historyData, isLoading: historyLoading } = useQuery({
     queryKey: ["session-history", session.session_id],
     queryFn: () => api.getSessionHistory(session.session_id, 100),
-    refetchInterval: 3000, // Poll for new messages
+    refetchInterval: 3000,
   })
 
   const messages = historyData?.messages || []
@@ -191,21 +181,19 @@ function ChatView({ session, onClose }: ChatViewProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <ChevronRight className="h-4 w-4 rotate-180" />
-          </Button>
-          <div>
-            <h3 className="font-medium">
-              {session.title || "Conversation"}
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              {session.message_count} messages
-            </p>
-          </div>
+      <div className="flex items-center gap-3 p-4 border-b border-border">
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-sm truncate">
+            {session.title || "Conversation"}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {session.message_count} messages
+          </p>
         </div>
-        <Badge variant={session.status === "active" ? "success" : "secondary"}>
+        <Badge variant={session.status === "active" ? "idle" : "secondary"}>
           {session.status}
         </Badge>
       </div>
@@ -214,13 +202,13 @@ function ChatView({ session, onClose }: ChatViewProps) {
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {historyLoading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <MessageSquare className="h-12 w-12 mb-4 opacity-50" />
-            <p>No messages yet</p>
-            <p className="text-sm">Start the conversation below</p>
+            <MessageSquare className="h-10 w-10 mb-3 opacity-30" />
+            <p className="text-sm">No messages yet</p>
+            <p className="text-xs mt-1">Start the conversation below</p>
           </div>
         ) : (
           messages.map((message) => (
@@ -233,7 +221,7 @@ function ChatView({ session, onClose }: ChatViewProps) {
             >
               <div
                 className={cn(
-                  "p-2 rounded-full shrink-0",
+                  "p-2 rounded-md shrink-0",
                   message.role === "user"
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary"
@@ -247,13 +235,13 @@ function ChatView({ session, onClose }: ChatViewProps) {
               </div>
               <div
                 className={cn(
-                  "flex flex-col max-w-[80%]",
+                  "flex flex-col max-w-[75%]",
                   message.role === "user" && "items-end"
                 )}
               >
                 <div
                   className={cn(
-                    "rounded-lg px-4 py-2",
+                    "rounded-md px-3 py-2",
                     message.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary"
@@ -268,12 +256,10 @@ function ChatView({ session, onClose }: ChatViewProps) {
                     {message.tool_calls.map((tc) => (
                       <div
                         key={tc.id}
-                        className="flex items-center gap-2 text-xs text-muted-foreground"
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground"
                       >
                         <Wrench className="h-3 w-3" />
-                        <span>
-                          Called: <code>{tc.function.name}</code>
-                        </span>
+                        <span className="font-mono">{tc.function.name}</span>
                       </div>
                     ))}
                   </div>
@@ -292,7 +278,7 @@ function ChatView({ session, onClose }: ChatViewProps) {
       <div className="p-4 border-t border-border">
         <form onSubmit={handleSend} className="flex gap-2">
           <Input
-            placeholder="Type your message..."
+            placeholder="Type a message..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             disabled={sendMutation.isPending || session.status !== "active"}
@@ -300,6 +286,7 @@ function ChatView({ session, onClose }: ChatViewProps) {
           />
           <Button
             type="submit"
+            size="icon"
             disabled={
               !inputValue.trim() ||
               sendMutation.isPending ||
@@ -327,8 +314,9 @@ export function Conversations({
   sessions,
   agents,
   onRefresh,
-  isLoading,
+  isLoading: _isLoading,
 }: ConversationsProps) {
+  void _isLoading
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const queryClient = useQueryClient()
@@ -345,7 +333,7 @@ export function Conversations({
   // If a session is selected, show the chat view
   if (selectedSession) {
     return (
-      <Card className="h-[calc(100vh-8rem)]">
+      <Card className="h-[calc(100vh-8rem)] animate-fade-in">
         <ChatView
           session={selectedSession}
           onClose={() => {
@@ -358,82 +346,72 @@ export function Conversations({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Conversations</h2>
+          <h1 className="text-lg font-medium">Conversations</h1>
           <p className="text-sm text-muted-foreground">
-            Chat with your AI agents
+            {sessions.length} conversation{sessions.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onRefresh} disabled={isLoading}>
-            <Loader2
-              className={cn("h-4 w-4", isLoading && "animate-spin")}
-            />
-            Refresh
-          </Button>
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4" />
-            New Chat
-          </Button>
-        </div>
+        <Button onClick={() => setShowCreateModal(true)} size="sm">
+          <Plus className="h-4 w-4" />
+          New Chat
+        </Button>
       </div>
 
       {/* Sessions List */}
       {sessions.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <MessageSquare className="h-16 w-16 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No conversations yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Start a new conversation with an agent
-            </p>
-            <Button onClick={() => setShowCreateModal(true)}>
+            <MessageSquare className="h-10 w-10 text-muted-foreground/30 mb-3" />
+            <p className="text-sm text-muted-foreground mb-4">No conversations yet</p>
+            <Button onClick={() => setShowCreateModal(true)} size="sm">
               <Plus className="h-4 w-4" />
-              Start Conversation
+              Start Chat
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-2">
           {sessions.map((session) => {
             const agent = agents.find((a) => a.agent_id === session.agent_id)
             return (
               <Card
                 key={session.session_id}
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                className="hover:bg-secondary/30 transition-colors duration-150 cursor-pointer"
                 onClick={() => setSelectedSession(session)}
               >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <MessageSquare className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-base">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-md bg-secondary">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">
                           {session.title || "Untitled"}
-                        </CardTitle>
-                        <p className="text-xs text-muted-foreground">
+                        </span>
+                        <Badge
+                          variant={session.status === "active" ? "idle" : "secondary"}
+                        >
+                          {session.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">
                           with {agent?.name || "Unknown Agent"}
-                        </p>
+                        </span>
+                        <span className="text-xs text-muted-foreground">·</span>
+                        <span className="text-xs text-muted-foreground">
+                          {session.message_count} messages
+                        </span>
                       </div>
                     </div>
-                    <Badge
-                      variant={
-                        session.status === "active" ? "success" : "secondary"
-                      }
-                    >
-                      {session.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{session.message_count} messages</span>
-                    <span>{formatRelativeTime(session.last_activity_at)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatRelativeTime(session.last_activity_at)}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
