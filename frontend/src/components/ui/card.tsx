@@ -1,75 +1,63 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import { type Component, type JSX, splitProps } from 'solid-js'
+import { cn } from '@/lib/utils'
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-lg border border-border bg-card text-card-foreground",
-      className
-    )}
-    {...props}
-  />
-))
-Card.displayName = "Card"
+interface CardProps extends JSX.HTMLAttributes<HTMLDivElement> {}
 
-const CardHeader = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex flex-col space-y-1 p-4", className)}
-    {...props}
-  />
-))
-CardHeader.displayName = "CardHeader"
+const Card: Component<CardProps> = (props) => {
+  const [local, others] = splitProps(props, ['class', 'children'])
+  return (
+    <div
+      class={cn('rounded-lg border border-border bg-card text-card-foreground', local.class)}
+      {...others}
+    >
+      {local.children}
+    </div>
+  )
+}
 
-const CardTitle = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("text-sm font-medium leading-none", className)}
-    {...props}
-  />
-))
-CardTitle.displayName = "CardTitle"
+const CardHeader: Component<CardProps> = (props) => {
+  const [local, others] = splitProps(props, ['class', 'children'])
+  return (
+    <div class={cn('flex flex-col space-y-1 p-4', local.class)} {...others}>
+      {local.children}
+    </div>
+  )
+}
 
-const CardDescription = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("text-xs text-muted-foreground", className)}
-    {...props}
-  />
-))
-CardDescription.displayName = "CardDescription"
+const CardTitle: Component<CardProps> = (props) => {
+  const [local, others] = splitProps(props, ['class', 'children'])
+  return (
+    <div class={cn('text-sm font-medium leading-none', local.class)} {...others}>
+      {local.children}
+    </div>
+  )
+}
 
-const CardContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-4 pt-0", className)} {...props} />
-))
-CardContent.displayName = "CardContent"
+const CardDescription: Component<CardProps> = (props) => {
+  const [local, others] = splitProps(props, ['class', 'children'])
+  return (
+    <div class={cn('text-xs text-muted-foreground', local.class)} {...others}>
+      {local.children}
+    </div>
+  )
+}
 
-const CardFooter = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex items-center p-4 pt-0", className)}
-    {...props}
-  />
-))
-CardFooter.displayName = "CardFooter"
+const CardContent: Component<CardProps> = (props) => {
+  const [local, others] = splitProps(props, ['class', 'children'])
+  return (
+    <div class={cn('p-4 pt-0', local.class)} {...others}>
+      {local.children}
+    </div>
+  )
+}
+
+const CardFooter: Component<CardProps> = (props) => {
+  const [local, others] = splitProps(props, ['class', 'children'])
+  return (
+    <div class={cn('flex items-center p-4 pt-0', local.class)} {...others}>
+      {local.children}
+    </div>
+  )
+}
 
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
