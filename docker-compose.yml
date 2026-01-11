@@ -114,6 +114,85 @@ services:
     depends_on:
       - prometheus
 
+  # =============================================================================
+  # Application Services
+  # =============================================================================
+
+  # API Server
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+      target: api
+    container_name: agent-orchestrator-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override to use Docker service names
+      DATABASE_HOST: postgres
+      REDIS_HOST: redis
+      NATS_SERVERS: '["nats://nats:4222"]'
+      S3_ENDPOINT_URL: http://minio:9000
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Agent Worker (scalable)
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+      target: worker
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: postgres
+      REDIS_HOST: redis
+      NATS_SERVERS: '["nats://nats:4222"]'
+      S3_ENDPOINT_URL: http://minio:9000
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on:
+      api:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+    restart: unless-stopped
+
+  # Result Handler
+  result-handler:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+      target: result-handler
+    container_name: agent-orchestrator-result-handler
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: postgres
+      REDIS_HOST: redis
+      NATS_SERVERS: '["nats://nats:4222"]'
+      S3_ENDPOINT_URL: http://minio:9000
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   nats-data:
   postgres-data:
