@@ -270,7 +270,13 @@ async def _wait_for_response(
         if task_data:
             status = task_data.get("status")
             if status == "completed":
-                return task_data.get("result", "")
+                # Wait for result to be populated (result handler may still be updating)
+                result = task_data.get("result")
+                if result is not None:
+                    return result
+                # Result not yet populated, wait a bit and retry
+                await asyncio.sleep(0.1)
+                continue
             elif status == "failed":
                 error = task_data.get("error", "Unknown error")
                 raise HTTPException(status_code=500, detail=f"Task failed: {error}")

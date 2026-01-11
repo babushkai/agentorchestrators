@@ -28,7 +28,7 @@ dependencies = [
     "aiohttp>=3.9.0",
 
     # Message Broker - NATS
-    "nats-py>=2.7.0",
+    "nats-py>=2.10.0",
 
     # Database
     "sqlalchemy[asyncio]>=2.0.25",

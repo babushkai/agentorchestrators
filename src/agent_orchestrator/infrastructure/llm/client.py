@@ -5,8 +5,16 @@ from typing import Any
 
 import structlog
 from circuitbreaker import circuit
-from anthropic import RateLimitError as AnthropicRateLimitError
-from openai import RateLimitError as OpenAIRateLimitError
+from anthropic import (
+    RateLimitError as AnthropicRateLimitError,
+    AuthenticationError as AnthropicAuthenticationError,
+    BadRequestError as AnthropicBadRequestError,
+)
+from openai import (
+    RateLimitError as OpenAIRateLimitError,
+    AuthenticationError as OpenAIAuthenticationError,
+    BadRequestError as OpenAIBadRequestError,
+)
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from agent_orchestrator.config import LLMSettings
@@ -27,6 +35,29 @@ logger = structlog.get_logger(__name__)
 def _is_rate_limit_error(error: BaseException) -> bool:
     """Check if error is a rate limit error from any provider."""
     return isinstance(error, (OpenAIRateLimitError, AnthropicRateLimitError))
+
+
+def _is_billing_or_auth_error(error: BaseException) -> bool:
+    """Check if error is a billing or authentication error from any provider.
+    
+    These errors indicate the API key is invalid or the account has no credits,
+    and should trigger fallback to alternative providers.
+    """
+    if isinstance(error, (OpenAIAuthenticationError, AnthropicAuthenticationError)):
+        return True
+    
+    # Check for billing-related BadRequestError (e.g., "credit balance too low")
+    if isinstance(error, (OpenAIBadRequestError, AnthropicBadRequestError)):
+        error_msg = str(error).lower()
+        if any(keyword in error_msg for keyword in ["credit", "billing", "balance", "payment", "quota"]):
+            return True
+    
+    return False
+
+
+def _is_fallback_eligible_error(error: BaseException) -> bool:
+    """Check if error should trigger fallback to alternative provider."""
+    return _is_rate_limit_error(error) or _is_billing_or_auth_error(error)
 
 
 class LLMClient:
@@ -119,6 +150,11 @@ class LLMClient:
         if provider_name == self._fallback_provider_name:
             return False
 
+        # Always fallback on billing/authentication errors
+        if _is_billing_or_auth_error(error):
+            return True
+
+        # Fallback on rate limit if configured
         if _is_rate_limit_error(error):
             return self._settings.fallback.fallback_on_rate_limit
 
@@ -153,14 +189,20 @@ class LLMClient:
             return response
 
         except Exception as e:
-            if not _is_rate_limit_error(e) or not self._should_fallback(e, provider_name):
+            if not self._should_fallback(e, provider_name):
                 raise
 
             # Log and execute fallback
             fallback_model = self._get_fallback_model(self._fallback_provider_name)  # type: ignore[arg-type]
 
+            # Determine the reason for fallback
+            if _is_billing_or_auth_error(e):
+                reason = "billing/authentication error"
+            else:
+                reason = "rate limit"
+
             logger.warning(
-                "Rate limit hit, falling back to alternative provider",
+                f"Provider {reason}, falling back to alternative provider",
                 original_provider=provider_name,
                 original_model=model,
                 fallback_provider=self._fallback_provider_name,
@@ -184,7 +226,7 @@ class LLMClient:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception(lambda e: not _is_rate_limit_error(e)),
+        retry=retry_if_exception(lambda e: not _is_fallback_eligible_error(e)),
     )
     @circuit(failure_threshold=5, recovery_timeout=30)
     async def complete(

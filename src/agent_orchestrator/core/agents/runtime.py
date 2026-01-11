@@ -2,9 +2,10 @@
 
 import asyncio
 import json
+import re
 from datetime import datetime, timezone
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import structlog
 
@@ -15,6 +16,70 @@ from agent_orchestrator.core.events import AgentEvent
 from agent_orchestrator.infrastructure.llm import LLMClient, LLMMessage, LLMResponse
 
 logger = structlog.get_logger(__name__)
+
+
+def _parse_text_tool_call(content: str, available_tools: list[str]) -> dict[str, Any] | None:
+    """
+    Attempt to parse a tool call from text content.
+    
+    Some local models output tool calls as JSON text instead of structured tool calls.
+    This function tries to extract and parse such calls.
+    
+    Returns a dict with 'name' and 'arguments' if found, None otherwise.
+    """
+    if not content:
+        return None
+    
+    content = content.strip()
+    
+    # Try to find JSON object in content
+    # Look for patterns like {"name": "tool_name", "parameters": {...}}
+    json_patterns = [
+        r'\{[^{}]*"name"\s*:\s*"([^"]+)"[^{}]*\}',  # Simple JSON with name
+        r'```json\s*(\{.*?\})\s*```',  # JSON in code block
+        r'```\s*(\{.*?\})\s*```',  # JSON in generic code block
+    ]
+    
+    for pattern in json_patterns:
+        match = re.search(pattern, content, re.DOTALL)
+        if match:
+            try:
+                # Try to parse the full JSON if we captured it
+                if match.lastindex and match.lastindex >= 1:
+                    json_str = match.group(1) if '{' in match.group(1) else match.group(0)
+                else:
+                    json_str = match.group(0)
+                
+                # Clean up the JSON string
+                json_str = json_str.strip()
+                if not json_str.startswith('{'):
+                    continue
+                    
+                data = json.loads(json_str)
+                
+                # Check if it looks like a tool call
+                if isinstance(data, dict) and "name" in data:
+                    tool_name = data.get("name")
+                    if tool_name in available_tools:
+                        # Extract arguments/parameters
+                        arguments = data.get("parameters") or data.get("arguments") or {}
+                        return {"name": tool_name, "arguments": arguments}
+            except (json.JSONDecodeError, AttributeError):
+                continue
+    
+    # Try direct JSON parse if content looks like JSON
+    if content.startswith('{') and content.endswith('}'):
+        try:
+            data = json.loads(content)
+            if isinstance(data, dict) and "name" in data:
+                tool_name = data.get("name")
+                if tool_name in available_tools:
+                    arguments = data.get("parameters") or data.get("arguments") or {}
+                    return {"name": tool_name, "arguments": arguments}
+        except json.JSONDecodeError:
+            pass
+    
+    return None
 
 
 class AgentExecutionResult:
@@ -163,7 +228,74 @@ class AgentRuntime:
                             execution_time_ms=execution_time,
                         )
                 else:
-                    # No tool calls - treat as final response
+                    # No structured tool calls - check if the content contains a text-based tool call
+                    # (some local models output tool calls as JSON text)
+                    text_tool_call = _parse_text_tool_call(
+                        response.content or "", 
+                        allowed_tools or []
+                    )
+                    
+                    if text_tool_call:
+                        # Found a text-based tool call, execute it
+                        logger.debug(
+                            "Parsed text-based tool call",
+                            tool_name=text_tool_call["name"],
+                            agent_id=str(self.agent_id),
+                        )
+                        
+                        # Create a synthetic tool call and execute
+                        tool_call = ToolCall(
+                            id=str(uuid4()),
+                            name=text_tool_call["name"],
+                            arguments=text_tool_call["arguments"],
+                        )
+                        
+                        # Check for final_answer
+                        if tool_call.name == "final_answer":
+                            execution_time = (
+                                datetime.now(timezone.utc) - start_time
+                            ).total_seconds() * 1000
+                            self._status = AgentStatus.IDLE
+                            return AgentExecutionResult(
+                                success=True,
+                                result=tool_call.arguments.get("answer"),
+                                iterations=iterations,
+                                total_tokens=total_tokens,
+                                execution_time_ms=execution_time,
+                            )
+                        
+                        # Execute the tool
+                        result = await self._tool_executor.execute(tool_call)
+                        
+                        # Emit tool call event
+                        if self._event_handler:
+                            await self._event_handler(
+                                AgentEvent.tool_call(
+                                    agent_id=self.agent_id,
+                                    task_id=task_id,
+                                    tool_name=tool_call.name,
+                                    success=result.success,
+                                    execution_time_ms=result.execution_time_ms,
+                                )
+                            )
+                        
+                        # Store assistant message with the text tool call
+                        await self._memory.add_assistant_message(response.content or "")
+                        
+                        # Store tool result
+                        result_content = (
+                            json.dumps(result.result) if result.success else f"Error: {result.error}"
+                        )
+                        await self._memory.add_tool_result(
+                            tool_name=tool_call.name,
+                            tool_call_id=tool_call.id,
+                            result=result_content,
+                        )
+                        
+                        # Continue the loop to get next LLM response
+                        continue
+                    
+                    # No tool calls at all - treat as final response
                     await self._memory.add_assistant_message(response.content or "")
                     execution_time = (
                         datetime.now(timezone.utc) - start_time
